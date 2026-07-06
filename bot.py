@@ -14,8 +14,13 @@ with open("config.json", "r") as f:
 
 CLIENT_ID = config["client_id"]
 CLIENT_SECRET = config["client_secret"]
-CHANNELS = config["channels"]
-INTERVAL = config["check_interval_seconds"]
+CHANNELS = config.get("channels", [])
+INTERVAL = config.get("check_interval_seconds", 60)
+SHORT_ID_LENGTH = config.get("short_id_length", 6)
+YT_DLP_QUIET = config.get("yt_dlp_quiet", False)
+
+if not isinstance(CHANNELS, list) or len(CHANNELS) == 0:
+    raise ValueError("config.json must contain at least 1 channel in 'channels' array")
 
 db.init_db()
 
@@ -108,7 +113,7 @@ def download_clip(clip, channel):
 
     game_name = safe_name(get_game_name(clip.get("game_id")))
     title = safe_name(clip["title"])
-    short_id = clip["id"][:6]
+    short_id = clip["id"][:SHORT_ID_LENGTH]
 
     # convert ISO timestamp → YYYY-MM-DD
     date_folder = clip["created_at"][:10]
@@ -120,13 +125,17 @@ def download_clip(clip, channel):
 
     print(f"[DOWNLOAD] {channel} ({game_name} / {date_folder}) → {title}")
 
-    result = subprocess.run([
+    cmd = [
         sys.executable, "-m", "yt_dlp",
         "--no-overwrites",
-        "--quiet",
         "-o", os.path.join(folder, filename),
         url
-    ])
+    ]
+
+    if YT_DLP_QUIET:
+        cmd.append("--quiet")
+
+    result = subprocess.run(cmd)
 
     return result.returncode == 0
 
