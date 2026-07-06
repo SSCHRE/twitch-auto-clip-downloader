@@ -30,7 +30,11 @@ The current implementation uses periodic checks to detect new clips via the Twit
 
 `pip install -r requirements.txt`
 
-3. Run the bot:
+3. Configure the bot:
+
+Edit `config.json` and add your Twitch API credentials and settings.
+
+4. Run the bot:
 
 `python bot.py`
 
