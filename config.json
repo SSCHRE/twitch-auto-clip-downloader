@@ -5,5 +5,6 @@
     "xxxxx"
   ],
   "check_interval_seconds": 60,
-  "short_id_length": 6
+  "short_id_length": 6,
+  "yt_dlp_quiet": true 
 }
