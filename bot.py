@@ -14,9 +14,12 @@ with open("config.json", "r") as f:
 
 CLIENT_ID = config["client_id"]
 CLIENT_SECRET = config["client_secret"]
-CHANNELS = config["channels"]
-INTERVAL = config["check_interval_seconds"]
+CHANNELS = config.get("channels", [])
+INTERVAL = config.get("check_interval_seconds", 60)
 SHORT_ID_LENGTH = config.get("short_id_length", 6)
+
+if not isinstance(CHANNELS, list) or len(CHANNELS) == 0:
+    raise ValueError("config.json must contain at least 1 channel in 'channels' array")
 
 db.init_db()
 
