@@ -16,6 +16,7 @@ CLIENT_ID = config["client_id"]
 CLIENT_SECRET = config["client_secret"]
 CHANNELS = config["channels"]
 INTERVAL = config["check_interval_seconds"]
+SHORT_ID_LENGTH = config.get("short_id_length", 6)
 
 db.init_db()
 
@@ -108,7 +109,7 @@ def download_clip(clip, channel):
 
     game_name = safe_name(get_game_name(clip.get("game_id")))
     title = safe_name(clip["title"])
-    short_id = clip["id"][:6]
+    short_id = clip["id"][:SHORT_ID_LENGTH]
 
     # convert ISO timestamp → YYYY-MM-DD
     date_folder = clip["created_at"][:10]
