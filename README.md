@@ -8,7 +8,7 @@ Automatically downloads newly created Twitch clips from one or more channels.
 - Customizable check interval (polling-based)  
 - Supports duplicate clip names (e.g. bot-generated clips or repeated titles)  
 - Automatically saves clips into a local `/clips` folder  
-  - Organized by channel / game / date for easier navigation  
+  - Organized by channel/game/date for easier navigation  
 
 ## Info
 
@@ -19,15 +19,39 @@ The current implementation uses periodic checks to detect new clips via the Twit
 ## Requirements
 
 - Python 3.8+
-- `requests` library
+- requests library
 - Twitch API credentials (Client ID + Client Secret)
 
 ## Setup
 
-1. Create a `config.json` file:
+1. Edit the `config.json` file in the project root
 
-```json
-{
-  "client_id": "YOUR_CLIENT_ID",
-  "client_secret": "YOUR_CLIENT_SECRET"
-}
+2. Install dependencies:
+
+`pip install requests`
+
+## Output
+
+Downloaded clips are stored in:
+`/clips`
+
+Example folder structure:
+`clips/ChannelName/GameName/clip.mp4`
+
+## Disclaimer
+
+This project is intended for personal, educational, and lawful use only.
+
+By using this software, you agree to comply with all applicable terms and policies of the Twitch platform and any APIs used.
+
+You are strictly prohibited from:
+- Using this tool to spam, overload, or abuse Twitch services or APIs
+- Attempting to bypass or violate API rate limits
+- Downloading, redistributing, or using content without proper rights or permission
+- Using this tool in any way that could harm, disrupt, or interfere with platform services or users
+
+API usage may be subject to rate limits, restrictions, or blocking at any time by Twitch.
+
+The author is not responsible for any misuse of this software or any consequences resulting from its use.
+
+This project is provided "as-is", without warranties or guarantees of any kind.
