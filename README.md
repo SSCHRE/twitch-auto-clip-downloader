@@ -6,7 +6,8 @@ Automatically downloads newly created Twitch clips from one or more channels.
 
 - Monitors one or multiple Twitch channels for newly created clips  
 - Customizable check interval (polling-based)  
-- Supports duplicate clip names (e.g. bot-generated clips or repeated titles)  
+- Supports duplicate clip names (e.g. bot-generated clips or repeated titles)
+- Keeps track of already downloaded clips through a SQLite database
 - Automatically saves clips into a local `/clips` folder  
   - Organized by channel/game/date for easier navigation  
 
