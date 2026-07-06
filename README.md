@@ -24,19 +24,15 @@ The current implementation uses periodic checks to detect new clips via the Twit
 
 ## Setup
 
-1. Edit the `config.json` file in the project root
+1. Clone the repository (or download the files)
 
 2. Install dependencies:
 
-`pip install requests`
+`pip install -r requirements.txt`
 
-## Output
+3. Run the bot:
 
-Downloaded clips are stored in:
-`/clips`
-
-Example folder structure:
-`clips/ChannelName/GameName/clip.mp4`
+`python bot.py`
 
 ## Disclaimer
 

@@ -40,10 +40,3 @@ def save_clip(clip_id, channel, title, url):
 
     conn.commit()
     conn.close()
-
-def get_latest_clip_time(channel):
-    # return ISO timestamp or None
-    pass
-
-def save_latest_clip_time(channel, created_at):
-    pass
