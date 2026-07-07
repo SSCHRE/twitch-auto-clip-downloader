@@ -9,6 +9,11 @@ import re
 import sys
 
 # ---------------- LOAD CONFIG ----------------
+if not os.path.exists("config.json"):
+    raise FileNotFoundError(
+        "config.json not found. Copy config.example.json and fill in your credentials."
+    )
+    
 with open("config.json", "r") as f:
     config = json.load(f)
 
@@ -18,6 +23,12 @@ CHANNELS = config.get("channels", [])
 INTERVAL = config.get("check_interval_seconds", 60)
 SHORT_ID_LENGTH = config.get("short_id_length", 6)
 YT_DLP_QUIET = config.get("yt_dlp_quiet", False)
+
+if INTERVAL < 30:
+    raise ValueError("'check_interval_seconds' must be at least 30")
+
+if SHORT_ID_LENGTH < 1:
+    raise ValueError("'short_id_length' must be at least 1")
 
 if not isinstance(CHANNELS, list) or len(CHANNELS) == 0:
     raise ValueError("config.json must contain at least 1 channel in 'channels' array")
