@@ -35,7 +35,7 @@ The current implementation uses periodic checks to detect new clips via the Twit
 
 3. Configure the bot:
 
-Edit `config.json` and add your Twitch API credentials and settings.
+Make a copy of `config.example.json` and name it `config.json` and add your Twitch API credentials and settings.
 
 4. Run the bot:
 
