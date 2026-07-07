@@ -195,8 +195,6 @@ try:
                         clip["url"]
                     )
 
-                    # db.save_latest_clip_time(channel, clip_time)
-
                     print(f"[SAVED] {clip_id}")
 
                 except Exception as e:
