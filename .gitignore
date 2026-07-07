@@ -3,6 +3,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+clips.db
+config.json
+clips/
+
+
 # C extensions
 *.so
 

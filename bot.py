@@ -155,51 +155,55 @@ for ch in CHANNELS:
 print("\nStarting monitoring loop...\n")
 
 # ---------------- LOOP ----------------
-while True:
-    for channel, uid in user_ids.items():
-        print(f"\n[CHECK] {channel} ({uid})")
+try:
+    while True:
+        for channel, uid in user_ids.items():
+            print(f"\n[CHECK] {channel} ({uid})")
 
-        clips = get_clips(uid)
+            clips = get_clips(uid)
 
-        if not clips:
-            print("[WARN] No clips returned")
-            continue
-
-        print(f"[INFO] {channel}: fetched {len(clips)} clips")
-
-        for clip in clips:
-            clip_id = clip["id"]
-            clip_time = clip["created_at"]
-            title = clip["title"]
-
-            # PRIMARY DEDUPE
-            if db.has_clip(clip_id):
+            if not clips:
+                print("[WARN] No clips returned")
                 continue
 
-            print(f"[NEW CLIP] {channel}: {title}")
+            print(f"[INFO] {channel}: fetched {len(clips)} clips")
 
-            try:
-                # download first
-                success = download_clip(clip, channel)
+            for clip in clips:
+                clip_id = clip["id"]
+                clip_time = clip["created_at"]
+                title = clip["title"]
 
-                if not success:
-                    print(f"[SKIP] Download failed: {clip_id}")
+                # PRIMARY DEDUPE
+                if db.has_clip(clip_id):
                     continue
 
-                # ONLY save after success
-                db.save_clip(
-                    clip_id,
-                    channel,
-                    title,
-                    clip["url"]
-                )
+                print(f"[NEW CLIP] {channel}: {title}")
 
-                db.save_latest_clip_time(channel, clip_time)
+                try:
+                    # download first
+                    success = download_clip(clip, channel)
 
-                print(f"[SAVED] {clip_id}")
+                    if not success:
+                        print(f"[SKIP] Download failed: {clip_id}")
+                        continue
 
-            except Exception as e:
-                print(f"[ERROR] Failed to process {clip_id}: {e}")
+                    # ONLY save after success
+                    db.save_clip(
+                        clip_id,
+                        channel,
+                        title,
+                        clip["url"]
+                    )
 
-    print(f"\n[SLEEP] Waiting {INTERVAL} seconds...\n")
-    time.sleep(INTERVAL)
+                    # db.save_latest_clip_time(channel, clip_time)
+
+                    print(f"[SAVED] {clip_id}")
+
+                except Exception as e:
+                    print(f"[ERROR] Failed to process {clip_id}: {e}")
+
+        print(f"\n[SLEEP] Waiting {INTERVAL} seconds...\n")
+        time.sleep(INTERVAL)
+
+except KeyboardInterrupt:
+    print("\nStopping bot...")
