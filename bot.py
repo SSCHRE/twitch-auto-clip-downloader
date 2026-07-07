@@ -30,7 +30,6 @@ CHANNELS = config.get("channels", [])
 INTERVAL = config.get("check_interval_seconds", 60)
 SHORT_ID_LENGTH = config.get("short_id_length", 6)
 YT_DLP_QUIET = config.get("yt_dlp_quiet", False)
-TOKEN = None
 
 if INTERVAL < 30:
     raise ValueError("'check_interval_seconds' must be at least 30")
