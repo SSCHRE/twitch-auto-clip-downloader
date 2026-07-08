@@ -20,7 +20,18 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          pip install pytest
 
       - name: Syntax check
         run: |
           python -m py_compile bot.py
+          
+      - name: Create test config
+        run: |
+          cp config.example.json config.json
+    
+      - name: Run tests
+        run: |
+          pytest
+        env:
+            PYTHONPATH: .

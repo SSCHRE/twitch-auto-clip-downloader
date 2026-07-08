@@ -3,8 +3,13 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-clips.db
+# Secrets
 config.json
+
+# Database
+clips.db
+
+# Downloads
 clips/
 
 
