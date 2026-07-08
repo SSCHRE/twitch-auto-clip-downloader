@@ -31,15 +31,21 @@ INTERVAL = config.get("check_interval_seconds", 60)
 SHORT_ID_LENGTH = config.get("short_id_length", 6)
 YT_DLP_QUIET = config.get("yt_dlp_quiet", False)
 
-if INTERVAL < 30:
-    raise ValueError("'check_interval_seconds' must be at least 30")
 
-if SHORT_ID_LENGTH < 1:
-    raise ValueError("'short_id_length' must be at least 1")
 
-if not isinstance(CHANNELS, list) or len(CHANNELS) == 0:
-    raise ValueError("config.json must contain at least 1 channel in 'channels' array")
+def validate_config():
+    if INTERVAL < 30:
+        raise ValueError("'check_interval_seconds' must be at least 30")
 
+    if SHORT_ID_LENGTH < 1:
+        raise ValueError("'short_id_length' must be at least 1")
+
+    if not isinstance(CHANNELS, list) or len(CHANNELS) == 0:
+        raise ValueError(
+            "config.json must contain at least 1 channel in 'channels' array"
+        )
+
+validate_config()
 db.init_db()
 
 logging.info("Config loaded")
@@ -49,6 +55,8 @@ logging.info("Channels: %s", CHANNELS)
 TOKEN = None
 headers = {}
 
+def initialize():
+    refresh_token()
 
 def get_token():
     logging.info("Requesting Twitch API access token")
@@ -114,8 +122,6 @@ def twitch_get(url):
     r.raise_for_status()
 
     return r
-
-refresh_token()
 
 # ---------------- CACHE ----------------
 game_cache = {}
@@ -211,24 +217,29 @@ def download_clip(clip, channel):
     if YT_DLP_QUIET:
         cmd.append("--quiet")
 
-    result = subprocess.run(cmd)
+    result = subprocess.run(cmd,
+        stdout=subprocess.DEVNULL if YT_DLP_QUIET else None,
+        stderr=subprocess.DEVNULL if YT_DLP_QUIET else None,
+    )
 
     return result.returncode == 0
 
 # ---------------- MAIN ----------------
-logging.info("Bot started...")
+def main():
+    logging.info("Bot started...")
 
-user_ids = {}
+    initialize()
 
-for ch in CHANNELS:
-    logging.info("Resolving user: %s", ch)
-    uid = get_user_id(ch)
-    if uid:
-        user_ids[ch] = uid
-        logging.info("Resolved user ID: %s", uid)
+    user_ids = {}
 
-# ---------------- LOOP ----------------
-try:
+    # Resolve user IDs once
+    for ch in CHANNELS:
+        logging.info("Resolving user:", ch)
+        uid = get_user_id(ch)
+        if uid:
+            user_ids[ch] = uid
+            logging.info("Resolved user ID: %s", uid)
+
     while True:
         for channel, uid in user_ids.items():
             logging.info("Checking channel: %s (%s)", channel, uid)
@@ -265,13 +276,22 @@ try:
                         clip["url"]
                     )
 
+                    db.save_latest_clip_time(channel, clip_time)
+
                     logging.info("Saved clip: %s", clip_id)
 
-                except Exception:
+                except KeyboardInterrupt:
+                    raise
+
+                except Exception as e:
                     logging.exception("Failed to process clip %s", clip_id)
 
         logging.info("Waiting %d seconds before next check", INTERVAL)
         time.sleep(INTERVAL)
 
-except KeyboardInterrupt:
-    logging.info("\nStopping bot...")
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        logging.info("Stopping bot...")
