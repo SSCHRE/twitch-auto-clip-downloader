@@ -9,7 +9,24 @@ Automatically downloads newly created Twitch clips from one or more channels.
 - Supports duplicate clip names (e.g. bot-generated clips or repeated titles)
 - Keeps track of already downloaded clips through a SQLite database
 - Automatically saves clips into a local `/clips` folder  
-  - Organized by channel/game/date for easier navigation  
+  - Organized by channel/game/date for easier navigation
+- Configurable clip folder structure
+  - Supports `game_date` layout:
+    ```
+    clips/
+    └── ChannelName/
+        └── GameName/
+            └── YYYY-MM-DD/
+                └── clip.mp4
+    ```
+  - Supports `date_game` layout:
+    ```
+    clips/
+    └── ChannelName/
+        └── YYYY-MM-DD/
+            └── GameName/
+                └── clip.mp4
+    ```
 
 ## Info
 
