@@ -30,6 +30,7 @@ CHANNELS = config.get("channels", [])
 INTERVAL = config.get("check_interval_seconds", 60)
 SHORT_ID_LENGTH = config.get("short_id_length", 6)
 YT_DLP_QUIET = config.get("yt_dlp_quiet", False)
+CLIP_FOLDER_ORDER = config.get("clip_folder_order", "game_date")
 
 
 
@@ -43,6 +44,11 @@ def validate_config():
     if not isinstance(CHANNELS, list) or len(CHANNELS) == 0:
         raise ValueError(
             "config.json must contain at least 1 channel in 'channels' array"
+        )
+        
+    if CLIP_FOLDER_ORDER not in ("game_date", "date_game"):
+        raise ValueError(
+            "'clip_folder_order' must be either 'game_date' or 'date_game'"
         )
 
 validate_config()
@@ -128,7 +134,24 @@ game_cache = {}
 
 # ---------------- USER ID ----------------
 def safe_name(name: str) -> str:
-    return re.sub(r'[<>:"/\\|?*]', '_', name).strip()
+    name = re.sub(r'[<>:"/\\|?*]', '_', name)
+
+    name = name.rstrip(" .")
+
+    if not name:
+        name = "Unknown"
+
+    # Windows reserved names
+    reserved = {
+        "CON", "PRN", "AUX", "NUL",
+        "COM1", "COM2", "COM3", "COM4",
+        "LPT1", "LPT2", "LPT3"
+    }
+
+    if name.upper() in reserved:
+        name = f"_{name}"
+
+    return name
 
 def get_user_id(username):
     url = f"https://api.twitch.tv/helix/users?login={username}"
@@ -194,7 +217,22 @@ def download_clip(clip, channel):
 
     date_folder = clip["created_at"][:10]
 
-    folder = os.path.join("clips", channel, game_name, date_folder)
+    if CLIP_FOLDER_ORDER == "game_date":
+        folder = os.path.join(
+            "clips",
+            channel,
+            game_name,
+            date_folder
+        )
+
+    else:
+        folder = os.path.join(
+            "clips",
+            channel,
+            date_folder,
+            game_name
+        )
+
     os.makedirs(folder, exist_ok=True)
 
     filename = f"{title}_{short_id}.%(ext)s"
@@ -227,14 +265,12 @@ def download_clip(clip, channel):
 # ---------------- MAIN ----------------
 def main():
     logging.info("Bot started...")
-
+    
     initialize()
-
     user_ids = {}
 
-    # Resolve user IDs once
     for ch in CHANNELS:
-        logging.info("Resolving user:", ch)
+        logging.info("Resolving user: %s", ch)
         uid = get_user_id(ch)
         if uid:
             user_ids[ch] = uid
@@ -275,8 +311,6 @@ def main():
                         title,
                         clip["url"]
                     )
-
-                    db.save_latest_clip_time(channel, clip_time)
 
                     logging.info("Saved clip: %s", clip_id)
 
