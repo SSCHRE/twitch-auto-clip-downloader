@@ -136,7 +136,8 @@ game_cache = {}
 def safe_name(name: str) -> str:
     name = re.sub(r'[<>:"/\\|?*]', '_', name)
 
-    name = name.rstrip(" .")
+    name = name.strip()
+    name = name.rstrip(".")
 
     if not name:
         name = "Unknown"
@@ -145,7 +146,9 @@ def safe_name(name: str) -> str:
     reserved = {
         "CON", "PRN", "AUX", "NUL",
         "COM1", "COM2", "COM3", "COM4",
-        "LPT1", "LPT2", "LPT3"
+        "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4",
+        "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
     }
 
     if name.upper() in reserved:
