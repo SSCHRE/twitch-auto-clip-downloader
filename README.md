@@ -23,6 +23,7 @@ The current implementation uses periodic checks to detect new clips via the Twit
 - Required libraries:
   - requests
   - yt-dlp
+  - pytest
 - Twitch API credentials (Client ID + Client Secret)
 
 ## Setup
