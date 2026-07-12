@@ -44,6 +44,7 @@ The current implementation uses periodic checks to detect new clips via the Twit
   - yt-dlp
   - pytest
 - Twitch API credentials (Client ID + Client Secret)
+- Rclone added on system variables, IF rclone is used
 
 ## Setup
 
