@@ -32,9 +32,18 @@ SHORT_ID_LENGTH = config.get("short_id_length", 6)
 YT_DLP_QUIET = config.get("yt_dlp_quiet", False)
 CLIP_FOLDER_ORDER = config.get("clip_folder_order", "game_date")
 
-
+# rclone
+ENABLE_RCLONE = config.get("enable_rclone", False)
+RCLONE_REMOTE = config.get("rclone_remote", "")
+RCLONE_DESTINATION = config.get("rclone_destination", "TwitchClips")
+RCLONE_COMMAND = config.get("rclone_command", "copy")
+RCLONE_ARGS = config.get("rclone_args", [])
 
 def validate_config():
+    validate_general_config()
+    validate_rclone_config()
+
+def validate_general_config():
     if INTERVAL < 30:
         raise ValueError("'check_interval_seconds' must be at least 30")
 
@@ -45,10 +54,40 @@ def validate_config():
         raise ValueError(
             "config.json must contain at least 1 channel in 'channels' array"
         )
-        
+
     if CLIP_FOLDER_ORDER not in ("game_date", "date_game"):
         raise ValueError(
             "'clip_folder_order' must be either 'game_date' or 'date_game'"
+        )
+
+def validate_rclone_config():
+    if not isinstance(ENABLE_RCLONE, bool):
+        raise ValueError("'enable_rclone' must be true or false")
+
+    if not isinstance(RCLONE_REMOTE, str):
+        raise ValueError("'rclone_remote' must be a string")
+
+    if ENABLE_RCLONE and not RCLONE_REMOTE:
+        raise ValueError(
+            "'rclone_remote' must be specified when enable_rclone is true"
+        )
+
+    if RCLONE_COMMAND not in ("copy", "sync", "move"):
+        raise ValueError(
+            "'rclone_command' must be 'copy', 'sync' or 'move'"
+        )
+
+    if not isinstance(RCLONE_ARGS, list):
+        raise ValueError(
+            "'rclone_args' must be an array"
+        )
+
+    if not isinstance(RCLONE_DESTINATION, str):
+        raise ValueError("'rclone_destination' must be a string")
+
+    if ENABLE_RCLONE and not RCLONE_DESTINATION:
+        raise ValueError(
+            "'rclone_destination' must be specified when enable_rclone is true"
         )
 
 validate_config()
@@ -265,6 +304,56 @@ def download_clip(clip, channel):
 
     return result.returncode == 0
 
+# ---------------- RCLONE ----------------
+def run_rclone():
+    if not ENABLE_RCLONE:
+        return True
+
+    logging.info(
+        "Starting rclone %s → %s",
+        RCLONE_COMMAND,
+        RCLONE_REMOTE
+    )
+
+    destination = f"{RCLONE_REMOTE}:{RCLONE_DESTINATION}"
+
+    cmd = [
+        "rclone",
+        RCLONE_COMMAND,
+        "clips",
+        destination
+    ]
+
+    cmd.extend(RCLONE_ARGS)
+
+    try:
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.DEVNULL if YT_DLP_QUIET else None,
+            stderr=subprocess.DEVNULL if YT_DLP_QUIET else None,
+        )
+
+        if result.returncode == 0:
+            logging.info("rclone completed successfully")
+            return True
+
+        logging.error(
+            "rclone failed with exit code: %d",
+            result.returncode
+        )
+
+        return False
+
+    except FileNotFoundError:
+        logging.error(
+            "rclone was not found. Install rclone or disable enable_rclone."
+        )
+        return False
+
+    except Exception:
+        logging.exception("Unexpected error while running rclone")
+        return False
+
 # ---------------- MAIN ----------------
 def main():
     logging.info("Bot started...")
@@ -280,6 +369,8 @@ def main():
             logging.info("Resolved user ID: %s", uid)
 
     while True:
+        downloaded_any = False
+
         for channel, uid in user_ids.items():
             logging.info("Checking channel: %s (%s)", channel, uid)
 
@@ -315,6 +406,8 @@ def main():
                         clip["url"]
                     )
 
+                    downloaded_any = True
+
                     logging.info("Saved clip: %s", clip_id)
 
                 except KeyboardInterrupt:
@@ -322,6 +415,24 @@ def main():
 
                 except Exception as e:
                     logging.exception("Failed to process clip %s", clip_id)
+
+        if ENABLE_RCLONE:
+
+            pending_uploads = db.get_unuploaded_clips()
+
+            if pending_uploads:
+                logging.info(
+                    "%d clips waiting for upload",
+                    len(pending_uploads)
+                )
+
+                if run_rclone():
+                    db.mark_all_uploaded()
+
+                    logging.info(
+                        "Marked %d clips as uploaded",
+                        len(pending_uploads)
+                    )
 
         logging.info("Waiting %d seconds before next check", INTERVAL)
         time.sleep(INTERVAL)

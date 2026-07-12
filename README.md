@@ -10,6 +10,8 @@ Automatically downloads newly created Twitch clips from one or more channels.
 - Keeps track of already downloaded clips through a SQLite database
 - Automatically saves clips into a local `/clips` folder  
   - Organized by channel/game/date for easier navigation
+- Supports rclone to automatically upload new clips after downloading.
+  - Requires environment variable `rclone` command to be available
 - Configurable clip folder structure
   - Supports `game_date` layout:
     ```
