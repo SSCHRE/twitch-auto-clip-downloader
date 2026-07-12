@@ -65,3 +65,34 @@ def test_valid_config(monkeypatch):
     )
 
     bot.validate_config()
+
+def test_default_rclone_destination(monkeypatch, tmp_path):
+    config = {
+        "client_id": "id",
+        "client_secret": "secret",
+        "channels": ["testchannel"]
+    }
+
+    bot = load_bot_with_config(
+        monkeypatch,
+        tmp_path,
+        config
+    )
+
+    assert bot.RCLONE_DESTINATION == "TwitchClips"
+
+def test_custom_rclone_destination(monkeypatch, tmp_path):
+    config = {
+        "client_id": "id",
+        "client_secret": "secret",
+        "channels": ["testchannel"],
+        "rclone_destination": "Backups/Twitch"
+    }
+
+    bot = load_bot_with_config(
+        monkeypatch,
+        tmp_path,
+        config
+    )
+
+    assert bot.RCLONE_DESTINATION == "Backups/Twitch"

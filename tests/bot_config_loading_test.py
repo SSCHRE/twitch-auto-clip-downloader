@@ -2,24 +2,6 @@ import pytest
 import json
 import importlib
 
-def load_bot_with_config(monkeypatch, tmp_path, config_data):
-    """
-    Helper that creates a temporary config.json
-    """
-
-    config_file = tmp_path / "config.json"
-
-    config_file.write_text(
-        json.dumps(config_data)
-    )
-
-    monkeypatch.chdir(tmp_path)
-
-    import bot
-
-    return importlib.reload(bot)
-
-
 def test_missing_client_id(monkeypatch, tmp_path):
     config = {
         "client_secret": "secret",

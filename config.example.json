@@ -7,5 +7,11 @@
   "check_interval_seconds": 60,
   "short_id_length": 6,
   "yt_dlp_quiet": true,
-  "clip_folder_order": "game_date" 
+  "clip_folder_order": "game_date",
+
+  "enable_rclone": true,
+  "rclone_remote": "filen",
+  "rclone_destination": "t3esting/teeeeeeeest",
+  "rclone_command": "copy",
+  "rclone_args": []
 }
