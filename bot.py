@@ -31,6 +31,7 @@ INTERVAL = config.get("check_interval_seconds", 60)
 SHORT_ID_LENGTH = config.get("short_id_length", 6)
 YT_DLP_QUIET = config.get("yt_dlp_quiet", False)
 CLIP_FOLDER_ORDER = config.get("clip_folder_order", "game_date")
+CLIP_LOOKBACK_DAYS = config.get("clip_lookback_days", 1)
 
 # rclone
 ENABLE_RCLONE = config.get("enable_rclone", False)
@@ -59,6 +60,17 @@ def validate_general_config():
     if CLIP_FOLDER_ORDER not in ("game_date", "date_game"):
         raise ValueError(
             "'clip_folder_order' must be either 'game_date' or 'date_game'"
+        )
+
+    if CLIP_LOOKBACK_DAYS < 1:
+        raise ValueError(
+            "'clip_lookback_days' must be at least 1"
+        )
+
+    if CLIP_LOOKBACK_DAYS > 15:
+        logging.warning(
+            "clip_lookback_days is set to %d days",
+            CLIP_LOOKBACK_DAYS
         )
 
 def validate_rclone_config():
@@ -239,7 +251,9 @@ def get_game_name(game_id):
 # ---------------- GET CLIPS ----------------
 def get_clips(user_id):
     now = datetime.datetime.now(datetime.UTC)
-    started_at = (now - datetime.timedelta(days=5)).isoformat().replace("+00:00", "Z")
+    started_at = (
+        now - datetime.timedelta(days=5)
+    ).isoformat().replace("+00:00", "Z")
 
     url = (
         f"https://api.twitch.tv/helix/clips"

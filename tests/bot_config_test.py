@@ -96,3 +96,37 @@ def test_custom_rclone_destination(monkeypatch, tmp_path):
     )
 
     assert bot.RCLONE_DESTINATION == "Backups/Twitch"
+
+def test_default_clip_lookback_days(monkeypatch, tmp_path):
+
+    config = {
+        "client_id": "id",
+        "client_secret": "secret",
+        "channels": ["testchannel"]
+    }
+
+    bot = load_bot_with_config(
+        monkeypatch,
+        tmp_path,
+        config
+    )
+
+    assert bot.CLIP_LOOKBACK_DAYS == 1
+
+
+def test_custom_clip_lookback_days(monkeypatch, tmp_path):
+
+    config = {
+        "client_id": "id",
+        "client_secret": "secret",
+        "channels": ["testchannel"],
+        "clip_lookback_days": 14
+    }
+
+    bot = load_bot_with_config(
+        monkeypatch,
+        tmp_path,
+        config
+    )
+
+    assert bot.CLIP_LOOKBACK_DAYS == 14
