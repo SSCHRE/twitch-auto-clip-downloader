@@ -34,10 +34,11 @@ CLIP_FOLDER_ORDER = config.get("clip_folder_order", "game_date")
 
 # rclone
 ENABLE_RCLONE = config.get("enable_rclone", False)
-RCLONE_REMOTE = config.get("rclone_remote", "")
+RCLONE_REMOTES = config.get("rclone_remotes", [])
 RCLONE_DESTINATION = config.get("rclone_destination", "TwitchClips")
 RCLONE_COMMAND = config.get("rclone_command", "copy")
 RCLONE_ARGS = config.get("rclone_args", [])
+RCLONE_SHOW_PROGRESS = config.get("rclone_show_progress", False)
 
 def validate_config():
     validate_general_config()
@@ -64,12 +65,14 @@ def validate_rclone_config():
     if not isinstance(ENABLE_RCLONE, bool):
         raise ValueError("'enable_rclone' must be true or false")
 
-    if not isinstance(RCLONE_REMOTE, str):
-        raise ValueError("'rclone_remote' must be a string")
-
-    if ENABLE_RCLONE and not RCLONE_REMOTE:
+    if not isinstance(RCLONE_REMOTES, list):
         raise ValueError(
-            "'rclone_remote' must be specified when enable_rclone is true"
+            "'rclone_remotes' must be an array"
+        )
+
+    if ENABLE_RCLONE and len(RCLONE_REMOTES) == 0:
+        raise ValueError(
+            "'rclone_remotes' must contain at least one remote when enable_rclone is true"
         )
 
     if RCLONE_COMMAND not in ("copy", "sync", "move"):
@@ -88,6 +91,11 @@ def validate_rclone_config():
     if ENABLE_RCLONE and not RCLONE_DESTINATION:
         raise ValueError(
             "'rclone_destination' must be specified when enable_rclone is true"
+        )
+
+    if not isinstance(RCLONE_SHOW_PROGRESS, bool):
+        raise ValueError(
+            "'rclone_show_progress' must be true or false"
         )
 
 validate_config()
@@ -297,9 +305,18 @@ def download_clip(clip, channel):
     if YT_DLP_QUIET:
         cmd.append("--quiet")
 
-    result = subprocess.run(cmd,
-        stdout=subprocess.DEVNULL if YT_DLP_QUIET else None,
-        stderr=subprocess.DEVNULL if YT_DLP_QUIET else None,
+    if RCLONE_SHOW_PROGRESS:
+        stdout = None
+        stderr = None
+    else:
+        stdout = subprocess.DEVNULL
+        stderr = subprocess.DEVNULL
+
+
+    result = subprocess.run(
+        cmd,
+        stdout=stdout,
+        stderr=stderr,
     )
 
     return result.returncode == 0
@@ -309,50 +326,78 @@ def run_rclone():
     if not ENABLE_RCLONE:
         return True
 
+    overall_success = True
+
     logging.info(
         "Starting rclone %s → %s",
         RCLONE_COMMAND,
-        RCLONE_REMOTE
+        RCLONE_REMOTES
     )
 
-    destination = f"{RCLONE_REMOTE}:{RCLONE_DESTINATION}"
+    for remote in RCLONE_REMOTES:
 
-    cmd = [
-        "rclone",
-        RCLONE_COMMAND,
-        "clips",
-        destination
-    ]
+        destination = f"{remote}:{RCLONE_DESTINATION}"
 
-    cmd.extend(RCLONE_ARGS)
+        cmd = [
+            "rclone",
+            RCLONE_COMMAND,
+            "clips",
+            destination
+        ]
 
-    try:
-        result = subprocess.run(
-            cmd,
-            stdout=subprocess.DEVNULL if YT_DLP_QUIET else None,
-            stderr=subprocess.DEVNULL if YT_DLP_QUIET else None,
+        if RCLONE_SHOW_PROGRESS:
+            cmd.append("--progress")
+
+        cmd.extend(RCLONE_ARGS)
+
+        logging.info(
+            "RCLONE - Uploading clips → %s",
+            destination
         )
 
-        if result.returncode == 0:
-            logging.info("rclone completed successfully")
-            return True
+        try:
+            if RCLONE_SHOW_PROGRESS:
+                stdout = None
+                stderr = None
+            else:
+                stdout = subprocess.DEVNULL
+                stderr = subprocess.DEVNULL
 
-        logging.error(
-            "rclone failed with exit code: %d",
-            result.returncode
-        )
 
-        return False
+            result = subprocess.run(
+                cmd,
+                stdout=stdout,
+                stderr=stderr,
+            )
 
-    except FileNotFoundError:
-        logging.error(
-            "rclone was not found. Install rclone or disable enable_rclone."
-        )
-        return False
+            if result.returncode == 0:
+                logging.info(
+                    "rclone completed successfully → %s",
+                    destination
+                )
 
-    except Exception:
-        logging.exception("Unexpected error while running rclone")
-        return False
+            else:
+                logging.error(
+                    "rclone failed for %s with exit code: %d",
+                    destination,
+                    result.returncode
+                )
+                overall_success = False
+
+        except FileNotFoundError:
+            logging.error(
+                "rclone was not found. Install rclone or disable enable_rclone."
+            )
+            return False
+
+        except Exception:
+            logging.exception(
+                "Unexpected error while running rclone for %s",
+                destination
+            )
+            overall_success = False
+
+    return overall_success
 
 # ---------------- MAIN ----------------
 def main():
