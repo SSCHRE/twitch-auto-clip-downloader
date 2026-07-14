@@ -10,8 +10,11 @@
   "clip_folder_order": "game_date",
 
   "enable_rclone": false,
-  "rclone_remote": "",
+  "rclone_remotes": [
+    ""
+  ],
   "rclone_destination": "folder/subfolder",
   "rclone_command": "copy",
-  "rclone_args": []
+  "rclone_args": [],
+  "rclone_show_progress": false
 }
