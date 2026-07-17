@@ -27,7 +27,7 @@ jobs:
 
       - name: Syntax check
         run: |
-          python -m py_compile bot.py
+          python -m py_compile bot.py config.py settings.py services.py app.py twitch_api.py download.py rclone.py db.py
           
       - name: Create test config
         run: |
