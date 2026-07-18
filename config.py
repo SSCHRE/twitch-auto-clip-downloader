@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import shutil
 
 
 def load_config(path="config.json"):
@@ -14,12 +15,20 @@ def load_config(path="config.json"):
 
 
 def validate_general_config(
+    client_id,
+    client_secret,
     interval,
     short_id_length,
     channels,
     clip_folder_order,
     clip_lookback_days,
 ):
+    if not isinstance(client_id, str) or client_id.strip() == "":
+        raise ValueError("'client_id' must not be empty")
+
+    if not isinstance(client_secret, str) or client_secret.strip() == "":
+        raise ValueError("'client_secret' must not be empty")
+
     if interval < 30:
         raise ValueError("'check_interval_seconds' must be at least 30")
 
@@ -44,6 +53,10 @@ def validate_general_config(
             "clip_lookback_days is set to %d days",
             clip_lookback_days,
         )
+
+
+def find_rclone_executable():
+    return shutil.which("rclone")
 
 
 def validate_rclone_config(
@@ -77,6 +90,11 @@ def validate_rclone_config(
     if enable_rclone and not rclone_destination:
         raise ValueError(
             "'rclone_destination' must be specified when enable_rclone is true"
+        )
+
+    if enable_rclone and find_rclone_executable() is None:
+        raise ValueError(
+            "'rclone' command not found on PATH. Install rclone or disable enable_rclone."
         )
 
     if not isinstance(rclone_show_progress, bool):

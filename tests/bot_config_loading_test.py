@@ -30,6 +30,58 @@ def test_missing_client_secret(monkeypatch, tmp_path):
         )
 
 
+def test_empty_client_id(monkeypatch, tmp_path):
+    config = {
+        "client_id": "",
+        "client_secret": "secret",
+        "channels": ["testchannel"]
+    }
+
+    with pytest.raises(ValueError, match="client_id"):
+        load_bot_with_config(
+            monkeypatch,
+            tmp_path,
+            config
+        )
+
+
+def test_empty_client_secret(monkeypatch, tmp_path):
+    config = {
+        "client_id": "id",
+        "client_secret": "",
+        "channels": ["testchannel"]
+    }
+
+    with pytest.raises(ValueError, match="client_secret"):
+        load_bot_with_config(
+            monkeypatch,
+            tmp_path,
+            config
+        )
+
+
+def test_rclone_not_on_path_at_startup(monkeypatch, tmp_path):
+    config = {
+        "client_id": "id",
+        "client_secret": "secret",
+        "channels": ["testchannel"],
+        "enable_rclone": True,
+        "rclone_remotes": ["gdrive"],
+    }
+
+    monkeypatch.setattr(
+        "config.shutil.which",
+        lambda cmd: None
+    )
+
+    with pytest.raises(ValueError, match="rclone"):
+        load_bot_with_config(
+            monkeypatch,
+            tmp_path,
+            config
+        )
+
+
 def test_missing_channels_fails(monkeypatch, tmp_path):
 
     config = {

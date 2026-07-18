@@ -43,6 +43,8 @@ class Settings:
 
     def validate(self):
         validate_general_config(
+            self.client_id,
+            self.client_secret,
             self.interval,
             self.short_id_length,
             self.channels,
@@ -60,6 +62,8 @@ class Settings:
 
 
 def validate_runtime(
+    client_id,
+    client_secret,
     interval,
     short_id_length,
     channels,
@@ -73,6 +77,8 @@ def validate_runtime(
     rclone_show_progress,
 ):
     validate_general_config(
+        client_id,
+        client_secret,
         interval,
         short_id_length,
         channels,

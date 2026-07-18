@@ -9,7 +9,11 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
       - name: Checkout repo
@@ -28,13 +32,13 @@ jobs:
       - name: Syntax check
         run: |
           python -m py_compile bot.py config.py settings.py services.py app.py twitch_api.py download.py rclone.py db.py
-          
+
       - name: Create test config
         run: |
-          cp config.example.json config.json
-    
+          python -c "import shutil; shutil.copy('tests/fixtures/ci_config.json', 'config.json')"
+
       - name: Run tests
         run: |
           pytest
         env:
-            PYTHONPATH: .
+          PYTHONPATH: .
