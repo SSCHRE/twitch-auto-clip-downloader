@@ -1,6 +1,87 @@
 import pytest
 import bot
 
+def test_empty_client_id(monkeypatch):
+    monkeypatch.setattr(
+        bot,
+        "CLIENT_ID",
+        ""
+    )
+
+    with pytest.raises(ValueError, match="client_id"):
+        bot.validate_config()
+
+
+def test_whitespace_client_id(monkeypatch):
+    monkeypatch.setattr(
+        bot,
+        "CLIENT_ID",
+        "   "
+    )
+
+    with pytest.raises(ValueError, match="client_id"):
+        bot.validate_config()
+
+
+def test_empty_client_secret(monkeypatch):
+    monkeypatch.setattr(
+        bot,
+        "CLIENT_SECRET",
+        ""
+    )
+
+    with pytest.raises(ValueError, match="client_secret"):
+        bot.validate_config()
+
+
+def test_whitespace_client_secret(monkeypatch):
+    monkeypatch.setattr(
+        bot,
+        "CLIENT_SECRET",
+        "   "
+    )
+
+    with pytest.raises(ValueError, match="client_secret"):
+        bot.validate_config()
+
+
+def test_rclone_not_on_path_when_enabled(monkeypatch):
+    monkeypatch.setattr(
+        bot,
+        "ENABLE_RCLONE",
+        True
+    )
+
+    monkeypatch.setattr(
+        bot,
+        "RCLONE_REMOTES",
+        ["gdrive"]
+    )
+
+    monkeypatch.setattr(
+        "config.shutil.which",
+        lambda cmd: None
+    )
+
+    with pytest.raises(ValueError, match="rclone"):
+        bot.validate_config()
+
+
+def test_rclone_not_checked_when_disabled(monkeypatch):
+    monkeypatch.setattr(
+        bot,
+        "ENABLE_RCLONE",
+        False
+    )
+
+    monkeypatch.setattr(
+        "config.shutil.which",
+        lambda cmd: None
+    )
+
+    bot.validate_config()
+
+
 def test_interval_too_low(monkeypatch):
     monkeypatch.setattr(
         bot,

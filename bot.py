@@ -56,6 +56,8 @@ def get_clips(user_id):
 
 def validate_config():
     validate_runtime(
+        CLIENT_ID,
+        CLIENT_SECRET,
         INTERVAL,
         SHORT_ID_LENGTH,
         CHANNELS,
