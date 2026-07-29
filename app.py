@@ -7,6 +7,7 @@ def run(
     channels,
     interval,
     enable_rclone,
+    cleanup_local_clips=None,
     initialize,
     get_user_id,
     get_clips,
@@ -61,7 +62,7 @@ def run(
                         )
                         continue
 
-                    save_clip(clip_id, channel, title, clip["url"])
+                    save_clip(clip_id, channel, title, clip["url"], clip["created_at"])
                     logging.info("Saved clip: %s", clip_id)
 
                 except KeyboardInterrupt:
@@ -85,6 +86,9 @@ def run(
                         "Marked %d clips as uploaded",
                         len(pending_uploads),
                     )
+
+        if cleanup_local_clips:
+            cleanup_local_clips()
 
         logging.info("Waiting %d seconds before next check", interval)
         sleep(interval)

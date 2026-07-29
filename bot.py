@@ -1,17 +1,33 @@
 import logging
 import subprocess
+import sys
 
 import db
 import twitch_api
 import app
 import services
+from cleanup import cleanup_old_local_clips as _cleanup_old_local_clips
 from download import safe_name, download_clip as _download_clip
 from rclone import run_rclone as _run_rclone
 from settings import Settings, setup_logging, validate_runtime
 
-_settings = Settings.load()
 setup_logging()
-_settings.validate()
+
+try:
+    _settings = Settings.load()
+except FileNotFoundError as exc:
+    logging.error("%s", exc)
+    if __name__ == "__main__":
+        sys.exit(1)
+    raise
+
+try:
+    _settings.validate()
+except ValueError as exc:
+    if __name__ == "__main__":
+        logging.error("%s", exc)
+        sys.exit(1)
+    raise
 db.init_db()
 
 logging.info("Config loaded")
@@ -27,6 +43,9 @@ YT_DLP_QUIET = _settings.yt_dlp_quiet
 CLIP_FOLDER_ORDER = _settings.clip_folder_order
 CLIP_NAME_FORMAT = _settings.clip_name_format
 CLIP_LOOKBACK_DAYS = _settings.clip_lookback_days
+DELETE_LOCAL_CLIPS_OUTSIDE_LOOKBACK = (
+    _settings.delete_local_clips_outside_lookback
+)
 ENABLE_RCLONE = _settings.enable_rclone
 RCLONE_REMOTES = _settings.rclone_remotes
 RCLONE_DESTINATION = _settings.rclone_destination
@@ -65,6 +84,7 @@ def validate_config():
         CLIP_FOLDER_ORDER,
         CLIP_NAME_FORMAT,
         CLIP_LOOKBACK_DAYS,
+        DELETE_LOCAL_CLIPS_OUTSIDE_LOOKBACK,
         ENABLE_RCLONE,
         RCLONE_REMOTES,
         RCLONE_COMMAND,
@@ -89,14 +109,28 @@ def download_clip(clip, channel):
 
 
 def run_rclone():
+    rclone_command = RCLONE_COMMAND
+
+    if DELETE_LOCAL_CLIPS_OUTSIDE_LOOKBACK and ENABLE_RCLONE:
+        rclone_command = "copy"
+
     return _run_rclone(
         enable_rclone=ENABLE_RCLONE,
         rclone_remotes=RCLONE_REMOTES,
         rclone_destination=RCLONE_DESTINATION,
-        rclone_command=RCLONE_COMMAND,
+        rclone_command=rclone_command,
         rclone_args=RCLONE_ARGS,
         rclone_show_progress=RCLONE_SHOW_PROGRESS,
         subprocess_module=subprocess,
+    )
+
+
+def cleanup_local_clips():
+    return _cleanup_old_local_clips(
+        lookback_days=CLIP_LOOKBACK_DAYS,
+        short_id_length=SHORT_ID_LENGTH,
+        delete_clips_before=db.delete_clips_before,
+        delete_clips_by_id_prefix=db.delete_clips_by_id_prefix,
     )
 
 
@@ -105,6 +139,11 @@ def main():
         channels=CHANNELS,
         interval=INTERVAL,
         enable_rclone=ENABLE_RCLONE,
+        cleanup_local_clips=(
+            cleanup_local_clips
+            if DELETE_LOCAL_CLIPS_OUTSIDE_LOOKBACK
+            else None
+        ),
         initialize=initialize,
         get_user_id=get_user_id,
         get_clips=get_clips,

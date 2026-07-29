@@ -12,6 +12,7 @@ VALID_CONFIG = (
     "game_date",
     "title",
     1,
+    False,
 )
 
 
@@ -26,6 +27,7 @@ def test_invalid_clip_name_format():
             "game_date",
             "invalid",
             1,
+            False,
         )
 
 
@@ -37,6 +39,7 @@ def test_logs_short_id_length_ignored_when_not_title(caplog, clip_name_format):
         *VALID_CONFIG[:6],
         clip_name_format,
         VALID_CONFIG[7],
+        VALID_CONFIG[8],
     )
 
     assert "short_id_length is ignored" in caplog.text

@@ -27,6 +27,12 @@ def init_db():
         ADD COLUMN uploaded INTEGER DEFAULT 0
         """)
 
+    if "created_at" not in columns:
+        c.execute("""
+        ALTER TABLE clips
+        ADD COLUMN created_at TEXT
+        """)
+
     conn.commit()
     conn.close()
 
@@ -44,7 +50,7 @@ def has_clip(clip_id):
     conn.close()
     return result
 
-def save_clip(clip_id, channel, title, url):
+def save_clip(clip_id, channel, title, url, created_at=None):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
 
@@ -54,18 +60,64 @@ def save_clip(clip_id, channel, title, url):
         clip_id,
         channel,
         title,
-        url
+        url,
+        created_at
     )
-    VALUES (?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?)
     """, (
         clip_id,
         channel,
         title,
-        url
+        url,
+        created_at,
     ))
+
+    if created_at:
+        c.execute("""
+        UPDATE clips
+        SET created_at = ?
+        WHERE clip_id = ?
+          AND created_at IS NULL
+        """, (created_at, clip_id))
 
     conn.commit()
     conn.close()
+
+
+def delete_clips_before(cutoff_date):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+
+    c.execute("""
+    DELETE FROM clips
+    WHERE created_at IS NOT NULL
+      AND substr(created_at, 1, 10) < ?
+    """, (cutoff_date.isoformat(),))
+
+    deleted = c.rowcount
+
+    conn.commit()
+    conn.close()
+
+    return deleted
+
+
+def delete_clips_by_id_prefix(prefix):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+
+    c.execute("""
+    DELETE FROM clips
+    WHERE clip_id LIKE ?
+      AND created_at IS NULL
+    """, (prefix + "%",))
+
+    deleted = c.rowcount
+
+    conn.commit()
+    conn.close()
+
+    return deleted
 
 def is_uploaded(clip_id):
     conn = sqlite3.connect(DB_FILE)

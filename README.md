@@ -7,7 +7,6 @@ Automatically downloads newly created Twitch clips from one or more channels.
 - Monitors one or multiple Twitch channels for newly created clips  
 - Customizable check interval (polling-based)  
 - Supports duplicate clip names (e.g. bot-generated clips or repeated titles)
-- Configurable clip filename format: title, random, or timestamp (all include a unique clip ID suffix)
 - Keeps track of already downloaded clips through a SQLite database
 - Automatically saves clips into a local `/clips` folder  
   - Organized by channel/game/date for easier navigation
@@ -74,6 +73,18 @@ Set `clip_name_format` in `config.json`:
 | `timestamp` | `2026-01-01_12-00-00_TKUHVRWr.%(ext)s` |
 
 `short_id_length` only applies to the `title` format. Random names use a generated token; timestamp names append a short clip ID suffix from the Twitch API (the unique part after `-` in the clip ID, up to 8 characters).
+
+## Local clip cleanup
+
+Set `delete_local_clips_outside_lookback` to `true` to remove local clips in date folders older than `clip_lookback_days`. 
+
+- Only deletes files under the local `clips/` folder
+- Also removes matching clip records from `clips.db`, so lowering lookback and raising it again will re-download those clips
+- Removes empty game/channel folders left behind after date folders are deleted
+- Runs after rclone uploads in each check cycle, so older clips can upload first
+- Does not delete anything from your rclone remotes
+
+When `enable_rclone` is also `true`, `rclone_command` must be `copy`. The bot will refuse to start with `sync` or `move`, because those could delete remote clips after local cleanup runs.
 
 ## Disclaimer
 
