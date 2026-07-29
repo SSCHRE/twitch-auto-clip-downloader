@@ -7,6 +7,7 @@ Automatically downloads newly created Twitch clips from one or more channels.
 - Monitors one or multiple Twitch channels for newly created clips  
 - Customizable check interval (polling-based)  
 - Supports duplicate clip names (e.g. bot-generated clips or repeated titles)
+- Configurable clip filename format: title, random, or timestamp (all include a unique clip ID suffix)
 - Keeps track of already downloaded clips through a SQLite database
 - Automatically saves clips into a local `/clips` folder  
   - Organized by channel/game/date for easier navigation
@@ -61,6 +62,18 @@ Make a copy of `config.example.json` and name it `config.json` and add your Twit
 4. Run the bot:
 
 `python bot.py`
+
+## Clip naming
+
+Set `clip_name_format` in `config.json`:
+
+| Value | Example filename |
+|-------|------------------|
+| `title` | `Cool Clip_abcdef.%(ext)s` |
+| `random` | `clip_a1b2c3d4e5f6.%(ext)s` |
+| `timestamp` | `2026-01-01_12-00-00_TKUHVRWr.%(ext)s` |
+
+`short_id_length` only applies to the `title` format. Random names use a generated token; timestamp names append a short clip ID suffix from the Twitch API (the unique part after `-` in the clip ID, up to 8 characters).
 
 ## Disclaimer
 

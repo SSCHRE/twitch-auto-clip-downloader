@@ -21,6 +21,7 @@ def validate_general_config(
     short_id_length,
     channels,
     clip_folder_order,
+    clip_name_format,
     clip_lookback_days,
 ):
     if not isinstance(client_id, str) or client_id.strip() == "":
@@ -43,6 +44,17 @@ def validate_general_config(
     if clip_folder_order not in ("game_date", "date_game"):
         raise ValueError(
             "'clip_folder_order' must be either 'game_date' or 'date_game'"
+        )
+
+    if clip_name_format not in ("title", "random", "timestamp"):
+        raise ValueError(
+            "'clip_name_format' must be 'title', 'random', or 'timestamp'"
+        )
+
+    if clip_name_format != "title":
+        logging.info(
+            "short_id_length is ignored when clip_name_format is '%s'",
+            clip_name_format,
         )
 
     if clip_lookback_days < 1:

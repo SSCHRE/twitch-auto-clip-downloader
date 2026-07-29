@@ -13,6 +13,7 @@ class Settings:
     short_id_length: int
     yt_dlp_quiet: bool
     clip_folder_order: str
+    clip_name_format: str
     clip_lookback_days: int
     enable_rclone: bool
     rclone_remotes: list
@@ -32,6 +33,7 @@ class Settings:
             short_id_length=config.get("short_id_length", 6),
             yt_dlp_quiet=config.get("yt_dlp_quiet", False),
             clip_folder_order=config.get("clip_folder_order", "game_date"),
+            clip_name_format=config.get("clip_name_format", "title"),
             clip_lookback_days=config.get("clip_lookback_days", 1),
             enable_rclone=config.get("enable_rclone", False),
             rclone_remotes=config.get("rclone_remotes", []),
@@ -49,6 +51,7 @@ class Settings:
             self.short_id_length,
             self.channels,
             self.clip_folder_order,
+            self.clip_name_format,
             self.clip_lookback_days,
         )
         validate_rclone_config(
@@ -68,6 +71,7 @@ def validate_runtime(
     short_id_length,
     channels,
     clip_folder_order,
+    clip_name_format,
     clip_lookback_days,
     enable_rclone,
     rclone_remotes,
@@ -83,6 +87,7 @@ def validate_runtime(
         short_id_length,
         channels,
         clip_folder_order,
+        clip_name_format,
         clip_lookback_days,
     )
     validate_rclone_config(

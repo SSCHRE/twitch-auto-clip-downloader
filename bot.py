@@ -25,6 +25,7 @@ INTERVAL = _settings.interval
 SHORT_ID_LENGTH = _settings.short_id_length
 YT_DLP_QUIET = _settings.yt_dlp_quiet
 CLIP_FOLDER_ORDER = _settings.clip_folder_order
+CLIP_NAME_FORMAT = _settings.clip_name_format
 CLIP_LOOKBACK_DAYS = _settings.clip_lookback_days
 ENABLE_RCLONE = _settings.enable_rclone
 RCLONE_REMOTES = _settings.rclone_remotes
@@ -62,6 +63,7 @@ def validate_config():
         SHORT_ID_LENGTH,
         CHANNELS,
         CLIP_FOLDER_ORDER,
+        CLIP_NAME_FORMAT,
         CLIP_LOOKBACK_DAYS,
         ENABLE_RCLONE,
         RCLONE_REMOTES,
@@ -78,6 +80,7 @@ def download_clip(clip, channel):
         channel,
         short_id_length=SHORT_ID_LENGTH,
         clip_folder_order=CLIP_FOLDER_ORDER,
+        clip_name_format=CLIP_NAME_FORMAT,
         yt_dlp_quiet=YT_DLP_QUIET,
         show_progress=RCLONE_SHOW_PROGRESS,
         get_game_name=get_game_name,
