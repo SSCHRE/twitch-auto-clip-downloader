@@ -13,7 +13,9 @@ class Settings:
     short_id_length: int
     yt_dlp_quiet: bool
     clip_folder_order: str
+    clip_name_format: str
     clip_lookback_days: int
+    delete_local_clips_outside_lookback: bool
     enable_rclone: bool
     rclone_remotes: list
     rclone_destination: str
@@ -32,7 +34,12 @@ class Settings:
             short_id_length=config.get("short_id_length", 6),
             yt_dlp_quiet=config.get("yt_dlp_quiet", False),
             clip_folder_order=config.get("clip_folder_order", "game_date"),
+            clip_name_format=config.get("clip_name_format", "title"),
             clip_lookback_days=config.get("clip_lookback_days", 1),
+            delete_local_clips_outside_lookback=config.get(
+                "delete_local_clips_outside_lookback",
+                False,
+            ),
             enable_rclone=config.get("enable_rclone", False),
             rclone_remotes=config.get("rclone_remotes", []),
             rclone_destination=config.get("rclone_destination", "TwitchClips"),
@@ -49,7 +56,9 @@ class Settings:
             self.short_id_length,
             self.channels,
             self.clip_folder_order,
+            self.clip_name_format,
             self.clip_lookback_days,
+            self.delete_local_clips_outside_lookback,
         )
         validate_rclone_config(
             self.enable_rclone,
@@ -58,6 +67,9 @@ class Settings:
             self.rclone_args,
             self.rclone_destination,
             self.rclone_show_progress,
+            delete_local_clips_outside_lookback=(
+                self.delete_local_clips_outside_lookback
+            ),
         )
 
 
@@ -68,7 +80,9 @@ def validate_runtime(
     short_id_length,
     channels,
     clip_folder_order,
+    clip_name_format,
     clip_lookback_days,
+    delete_local_clips_outside_lookback,
     enable_rclone,
     rclone_remotes,
     rclone_command,
@@ -83,7 +97,9 @@ def validate_runtime(
         short_id_length,
         channels,
         clip_folder_order,
+        clip_name_format,
         clip_lookback_days,
+        delete_local_clips_outside_lookback,
     )
     validate_rclone_config(
         enable_rclone,
@@ -92,6 +108,7 @@ def validate_runtime(
         rclone_args,
         rclone_destination,
         rclone_show_progress,
+        delete_local_clips_outside_lookback=delete_local_clips_outside_lookback,
     )
 
 

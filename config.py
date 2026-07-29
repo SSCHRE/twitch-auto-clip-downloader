@@ -21,7 +21,9 @@ def validate_general_config(
     short_id_length,
     channels,
     clip_folder_order,
+    clip_name_format,
     clip_lookback_days,
+    delete_local_clips_outside_lookback,
 ):
     if not isinstance(client_id, str) or client_id.strip() == "":
         raise ValueError("'client_id' must not be empty")
@@ -45,12 +47,36 @@ def validate_general_config(
             "'clip_folder_order' must be either 'game_date' or 'date_game'"
         )
 
+    if clip_name_format not in ("title", "random", "timestamp"):
+        raise ValueError(
+            "'clip_name_format' must be 'title', 'random', or 'timestamp'"
+        )
+
+    if clip_name_format != "title":
+        logging.info(
+            "clip_name_format is set to %s; short_id_length is ignored",
+            clip_name_format,
+        )
+
     if clip_lookback_days < 1:
         raise ValueError("'clip_lookback_days' must be at least 1")
 
     if clip_lookback_days > 15:
         logging.warning(
-            "clip_lookback_days is set to %d days",
+            "clip_lookback_days is set to %d days; Twitch may miss clips "
+            "beyond the first 1000 results in a single query",
+            clip_lookback_days,
+        )
+
+    if not isinstance(delete_local_clips_outside_lookback, bool):
+        raise ValueError(
+            "'delete_local_clips_outside_lookback' must be true or false"
+        )
+
+    if delete_local_clips_outside_lookback:
+        logging.info(
+            "Local clip cleanup enabled: clips older than %d days will be "
+            "deleted from the local clips folder",
             clip_lookback_days,
         )
 
@@ -66,6 +92,8 @@ def validate_rclone_config(
     rclone_args,
     rclone_destination,
     rclone_show_progress,
+    *,
+    delete_local_clips_outside_lookback=False,
 ):
     if not isinstance(enable_rclone, bool):
         raise ValueError("'enable_rclone' must be true or false")
@@ -99,3 +127,20 @@ def validate_rclone_config(
 
     if not isinstance(rclone_show_progress, bool):
         raise ValueError("'rclone_show_progress' must be true or false")
+
+    if (
+        delete_local_clips_outside_lookback
+        and enable_rclone
+        and rclone_command != "copy"
+    ):
+        raise ValueError(
+            "delete_local_clips_outside_lookback requires rclone_command to "
+            "be 'copy' so remote clips are not deleted when local files are "
+            "removed"
+        )
+
+    if delete_local_clips_outside_lookback and enable_rclone:
+        logging.info(
+            "rclone copy is required while delete_local_clips_outside_lookback "
+            "is enabled to keep remote clips safe"
+        )

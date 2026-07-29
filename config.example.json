@@ -1,4 +1,9 @@
 {
+  "_comments": {
+    "short_id_length": "Only applies when clip_name_format is title. Ignored for random and timestamp.",
+    "delete_local_clips_outside_lookback": "Delete local clips older than clip_lookback_days. Requires rclone_command copy when rclone is enabled."
+  },
+  
   "client_id": "",
   "client_secret": "",
   "channels": [
@@ -8,7 +13,9 @@
   "short_id_length": 6,
   "yt_dlp_quiet": true,
   "clip_folder_order": "game_date",
+  "clip_name_format": "title",
   "clip_lookback_days": 1,
+  "delete_local_clips_outside_lookback": false,
 
   "enable_rclone": false,
   "rclone_remotes": [

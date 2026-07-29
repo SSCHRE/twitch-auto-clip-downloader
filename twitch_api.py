@@ -87,22 +87,39 @@ def get_game_name(get_fn, game_id, cache):
     return name
 
 
+def _format_rfc3339_utc(dt):
+    return dt.isoformat().replace("+00:00", "Z")
+
+
 def get_clips(get_fn, user_id, lookback_days):
     now = datetime.datetime.now(datetime.UTC)
-    started_at = (
-        now - datetime.timedelta(days=lookback_days)
-    ).isoformat().replace("+00:00", "Z")
+    started_at = _format_rfc3339_utc(now - datetime.timedelta(days=lookback_days))
+    ended_at = _format_rfc3339_utc(now)
 
-    url = (
-        f"https://api.twitch.tv/helix/clips"
-        f"?broadcaster_id={user_id}"
-        f"&started_at={started_at}"
-        f"&first=100"
-    )
+    clips = []
+    cursor = None
 
-    r = get_fn(url)
-    r.raise_for_status()
+    while True:
+        url = (
+            f"https://api.twitch.tv/helix/clips"
+            f"?broadcaster_id={user_id}"
+            f"&started_at={started_at}"
+            f"&ended_at={ended_at}"
+            f"&first=100"
+        )
+        if cursor:
+            url += f"&after={cursor}"
 
-    data = r.json().get("data", [])
-    data.sort(key=lambda c: c["created_at"], reverse=True)
-    return data
+        r = get_fn(url)
+        r.raise_for_status()
+
+        payload = r.json()
+        batch = payload.get("data", [])
+        clips.extend(batch)
+
+        cursor = payload.get("pagination", {}).get("cursor")
+        if not cursor:
+            break
+
+    clips.sort(key=lambda c: c["created_at"], reverse=True)
+    return clips

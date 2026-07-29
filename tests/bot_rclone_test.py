@@ -51,6 +51,26 @@ def test_rclone_single_remote_success(monkeypatch):
     assert bot.run_rclone() is True
 
 
+def test_rclone_forces_copy_when_local_cleanup_enabled(monkeypatch):
+    fake_result = Mock()
+    fake_result.returncode = 0
+    captured = {}
+
+    monkeypatch.setattr(bot, "ENABLE_RCLONE", True)
+    monkeypatch.setattr(bot, "DELETE_LOCAL_CLIPS_OUTSIDE_LOOKBACK", True)
+    monkeypatch.setattr(bot, "RCLONE_COMMAND", "sync")
+    monkeypatch.setattr(bot, "RCLONE_REMOTES", ["gdrive"])
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        return fake_result
+
+    monkeypatch.setattr(bot.subprocess, "run", fake_run)
+
+    assert bot.run_rclone() is True
+    assert captured["cmd"][1] == "copy"
+
+
 def test_rclone_multiple_remotes(monkeypatch):
     fake_result = Mock()
     fake_result.returncode = 0
