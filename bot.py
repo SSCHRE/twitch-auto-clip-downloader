@@ -100,6 +100,7 @@ def download_clip(clip, channel):
         channel,
         short_id_length=SHORT_ID_LENGTH,
         clip_folder_order=CLIP_FOLDER_ORDER,
+        clip_name_format=CLIP_NAME_FORMAT,
         yt_dlp_quiet=YT_DLP_QUIET,
         show_progress=RCLONE_SHOW_PROGRESS,
         get_game_name=get_game_name,
