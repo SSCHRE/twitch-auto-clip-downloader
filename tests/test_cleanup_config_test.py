@@ -3,7 +3,16 @@ import pytest
 import config
 
 
-def test_rejects_sync_when_cleanup_enabled():
+@pytest.fixture
+def rclone_on_path(monkeypatch):
+    monkeypatch.setattr(
+        config,
+        "find_rclone_executable",
+        lambda: "/usr/bin/rclone",
+    )
+
+
+def test_rejects_sync_when_cleanup_enabled(rclone_on_path):
     with pytest.raises(ValueError, match="rclone_command.*copy"):
         config.validate_rclone_config(
             True,
@@ -16,7 +25,7 @@ def test_rejects_sync_when_cleanup_enabled():
         )
 
 
-def test_rejects_move_when_cleanup_enabled():
+def test_rejects_move_when_cleanup_enabled(rclone_on_path):
     with pytest.raises(ValueError, match="rclone_command.*copy"):
         config.validate_rclone_config(
             True,
@@ -29,7 +38,7 @@ def test_rejects_move_when_cleanup_enabled():
         )
 
 
-def test_allows_copy_when_cleanup_enabled(caplog):
+def test_allows_copy_when_cleanup_enabled(rclone_on_path, caplog):
     caplog.set_level("INFO")
 
     config.validate_rclone_config(
