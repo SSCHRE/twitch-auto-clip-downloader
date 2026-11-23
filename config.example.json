@@ -1,7 +1,10 @@
 {
   "_comments": {
-    "short_id_length": "Only applies when clip_name_format is title. Ignored for random and timestamp.",
-    "delete_local_clips_outside_lookback": "Delete local clips older than clip_lookback_days. Requires rclone_command copy when rclone is enabled."
+    "short_id_length": "Only applies when clip_name_format or vod_name_format is title. Ignored for random and timestamp.",
+    "enable_vod_download": "Download completed archive VODs. Currently live streams are never downloaded.",
+    "vod_lookback_days": "How many days of past broadcast archives to check when VOD download is enabled.",
+    "vod_name_format": "Same options as clip_name_format: title, random, or timestamp.",
+    "delete_local_after_upload": "Delete local clips and VODs after every rclone remote uploaded them successfully. Requires enable_rclone and rclone_command copy."
   },
   
   "client_id": "",
@@ -15,9 +18,13 @@
   "clip_folder_order": "game_date",
   "clip_name_format": "title",
   "clip_lookback_days": 1,
-  "delete_local_clips_outside_lookback": false,
+
+  "enable_vod_download": false,
+  "vod_lookback_days": 7,
+  "vod_name_format": "title",
 
   "enable_rclone": false,
+  "delete_local_after_upload": false,
   "rclone_remotes": [
     ""
   ],

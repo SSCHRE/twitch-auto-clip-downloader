@@ -15,7 +15,10 @@ class Settings:
     clip_folder_order: str
     clip_name_format: str
     clip_lookback_days: int
-    delete_local_clips_outside_lookback: bool
+    enable_vod_download: bool
+    vod_lookback_days: int
+    vod_name_format: str
+    delete_local_after_upload: bool
     enable_rclone: bool
     rclone_remotes: list
     rclone_destination: str
@@ -26,6 +29,18 @@ class Settings:
     @classmethod
     def load(cls, path="config.json"):
         config = load_config(path)
+
+        for old_key in (
+            "delete_local_clips_outside_lookback",
+            "delete_local_vods_outside_lookback",
+        ):
+            if old_key in config:
+                logging.warning(
+                    "'%s' is no longer used; set "
+                    "'delete_local_after_upload' instead",
+                    old_key,
+                )
+
         return cls(
             client_id=config["client_id"],
             client_secret=config["client_secret"],
@@ -36,8 +51,11 @@ class Settings:
             clip_folder_order=config.get("clip_folder_order", "game_date"),
             clip_name_format=config.get("clip_name_format", "title"),
             clip_lookback_days=config.get("clip_lookback_days", 1),
-            delete_local_clips_outside_lookback=config.get(
-                "delete_local_clips_outside_lookback",
+            enable_vod_download=config.get("enable_vod_download", False),
+            vod_lookback_days=config.get("vod_lookback_days", 7),
+            vod_name_format=config.get("vod_name_format", "title"),
+            delete_local_after_upload=config.get(
+                "delete_local_after_upload",
                 False,
             ),
             enable_rclone=config.get("enable_rclone", False),
@@ -58,7 +76,9 @@ class Settings:
             self.clip_folder_order,
             self.clip_name_format,
             self.clip_lookback_days,
-            self.delete_local_clips_outside_lookback,
+            self.enable_vod_download,
+            self.vod_lookback_days,
+            self.vod_name_format,
         )
         validate_rclone_config(
             self.enable_rclone,
@@ -67,9 +87,7 @@ class Settings:
             self.rclone_args,
             self.rclone_destination,
             self.rclone_show_progress,
-            delete_local_clips_outside_lookback=(
-                self.delete_local_clips_outside_lookback
-            ),
+            delete_local_after_upload=self.delete_local_after_upload,
         )
 
 
@@ -82,13 +100,16 @@ def validate_runtime(
     clip_folder_order,
     clip_name_format,
     clip_lookback_days,
-    delete_local_clips_outside_lookback,
+    enable_vod_download,
+    vod_lookback_days,
+    vod_name_format,
     enable_rclone,
     rclone_remotes,
     rclone_command,
     rclone_args,
     rclone_destination,
     rclone_show_progress,
+    delete_local_after_upload=False,
 ):
     validate_general_config(
         client_id,
@@ -99,7 +120,9 @@ def validate_runtime(
         clip_folder_order,
         clip_name_format,
         clip_lookback_days,
-        delete_local_clips_outside_lookback,
+        enable_vod_download,
+        vod_lookback_days,
+        vod_name_format,
     )
     validate_rclone_config(
         enable_rclone,
@@ -108,7 +131,7 @@ def validate_runtime(
         rclone_args,
         rclone_destination,
         rclone_show_progress,
-        delete_local_clips_outside_lookback=delete_local_clips_outside_lookback,
+        delete_local_after_upload=delete_local_after_upload,
     )
 
 

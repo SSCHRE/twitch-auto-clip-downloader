@@ -13,6 +13,8 @@ VALID_CONFIG = (
     "title",
     1,
     False,
+    7,
+    "title",
 )
 
 
@@ -28,6 +30,8 @@ def test_invalid_clip_name_format():
             "invalid",
             1,
             False,
+            7,
+            "title",
         )
 
 
@@ -38,8 +42,7 @@ def test_logs_short_id_length_ignored_when_not_title(caplog, clip_name_format):
     config.validate_general_config(
         *VALID_CONFIG[:6],
         clip_name_format,
-        VALID_CONFIG[7],
-        VALID_CONFIG[8],
+        *VALID_CONFIG[7:],
     )
 
     assert "short_id_length is ignored" in caplog.text
@@ -52,4 +55,3 @@ def test_does_not_log_short_id_length_ignored_for_title(caplog):
     config.validate_general_config(*VALID_CONFIG)
 
     assert "short_id_length is ignored" not in caplog.text
-

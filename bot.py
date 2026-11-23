@@ -6,8 +6,12 @@ import db
 import twitch_api
 import app
 import services
-from cleanup import cleanup_old_local_clips as _cleanup_old_local_clips
-from download import safe_name, download_clip as _download_clip
+from cleanup import cleanup_uploaded_files as _cleanup_uploaded_files
+from download import (
+    safe_name,
+    download_clip as _download_clip,
+    download_vod as _download_vod,
+)
 from rclone import run_rclone as _run_rclone
 from settings import Settings, setup_logging, validate_runtime
 
@@ -43,9 +47,10 @@ YT_DLP_QUIET = _settings.yt_dlp_quiet
 CLIP_FOLDER_ORDER = _settings.clip_folder_order
 CLIP_NAME_FORMAT = _settings.clip_name_format
 CLIP_LOOKBACK_DAYS = _settings.clip_lookback_days
-DELETE_LOCAL_CLIPS_OUTSIDE_LOOKBACK = (
-    _settings.delete_local_clips_outside_lookback
-)
+ENABLE_VOD_DOWNLOAD = _settings.enable_vod_download
+VOD_LOOKBACK_DAYS = _settings.vod_lookback_days
+VOD_NAME_FORMAT = _settings.vod_name_format
+DELETE_LOCAL_AFTER_UPLOAD = _settings.delete_local_after_upload
 ENABLE_RCLONE = _settings.enable_rclone
 RCLONE_REMOTES = _settings.rclone_remotes
 RCLONE_DESTINATION = _settings.rclone_destination
@@ -74,6 +79,16 @@ def get_clips(user_id):
     return twitch_api.get_clips(twitch_get, user_id, CLIP_LOOKBACK_DAYS)
 
 
+def get_videos(user_id):
+    live_stream_id = twitch_api.get_live_stream_id(twitch_get, user_id)
+    return twitch_api.get_videos(
+        twitch_get,
+        user_id,
+        VOD_LOOKBACK_DAYS,
+        exclude_stream_id=live_stream_id,
+    )
+
+
 def validate_config():
     validate_runtime(
         CLIENT_ID,
@@ -84,13 +99,16 @@ def validate_config():
         CLIP_FOLDER_ORDER,
         CLIP_NAME_FORMAT,
         CLIP_LOOKBACK_DAYS,
-        DELETE_LOCAL_CLIPS_OUTSIDE_LOOKBACK,
+        ENABLE_VOD_DOWNLOAD,
+        VOD_LOOKBACK_DAYS,
+        VOD_NAME_FORMAT,
         ENABLE_RCLONE,
         RCLONE_REMOTES,
         RCLONE_COMMAND,
         RCLONE_ARGS,
         RCLONE_DESTINATION,
         RCLONE_SHOW_PROGRESS,
+        delete_local_after_upload=DELETE_LOCAL_AFTER_UPLOAD,
     )
 
 
@@ -108,10 +126,29 @@ def download_clip(clip, channel):
     )
 
 
+def download_vod(video, channel):
+    return _download_vod(
+        video,
+        channel,
+        short_id_length=SHORT_ID_LENGTH,
+        vod_name_format=VOD_NAME_FORMAT,
+        yt_dlp_quiet=YT_DLP_QUIET,
+        show_progress=RCLONE_SHOW_PROGRESS,
+        subprocess_module=subprocess,
+    )
+
+
+def local_folders():
+    folders = ["clips"]
+    if ENABLE_VOD_DOWNLOAD:
+        folders.append("vods")
+    return folders
+
+
 def run_rclone():
     rclone_command = RCLONE_COMMAND
 
-    if DELETE_LOCAL_CLIPS_OUTSIDE_LOOKBACK and ENABLE_RCLONE:
+    if DELETE_LOCAL_AFTER_UPLOAD and ENABLE_RCLONE:
         rclone_command = "copy"
 
     return _run_rclone(
@@ -122,16 +159,12 @@ def run_rclone():
         rclone_args=RCLONE_ARGS,
         rclone_show_progress=RCLONE_SHOW_PROGRESS,
         subprocess_module=subprocess,
+        local_folders=local_folders(),
     )
 
 
-def cleanup_local_clips():
-    return _cleanup_old_local_clips(
-        lookback_days=CLIP_LOOKBACK_DAYS,
-        short_id_length=SHORT_ID_LENGTH,
-        delete_clips_before=db.delete_clips_before,
-        delete_clips_by_id_prefix=db.delete_clips_by_id_prefix,
-    )
+def cleanup_uploaded_files():
+    return _cleanup_uploaded_files(local_folders())
 
 
 def main():
@@ -139,9 +172,10 @@ def main():
         channels=CHANNELS,
         interval=INTERVAL,
         enable_rclone=ENABLE_RCLONE,
-        cleanup_local_clips=(
-            cleanup_local_clips
-            if DELETE_LOCAL_CLIPS_OUTSIDE_LOOKBACK
+        enable_vod_download=ENABLE_VOD_DOWNLOAD,
+        cleanup_uploaded_files=(
+            cleanup_uploaded_files
+            if DELETE_LOCAL_AFTER_UPLOAD and ENABLE_RCLONE
             else None
         ),
         initialize=initialize,
@@ -153,6 +187,12 @@ def main():
         save_clip=db.save_clip,
         get_unuploaded_clips=db.get_unuploaded_clips,
         mark_all_uploaded=db.mark_all_uploaded,
+        get_videos=get_videos,
+        download_vod=download_vod,
+        has_vod=db.has_vod,
+        save_vod=db.save_vod,
+        get_unuploaded_vods=db.get_unuploaded_vods,
+        mark_all_vods_uploaded=db.mark_all_vods_uploaded,
     )
 
 

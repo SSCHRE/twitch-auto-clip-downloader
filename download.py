@@ -120,3 +120,78 @@ def download_clip(
 
     result = subprocess_module.run(cmd, stdout=stdout, stderr=stderr)
     return result.returncode == 0
+
+
+def build_vod_filename(
+    video,
+    *,
+    vod_name_format,
+    short_id_length,
+    unique_suffix=None,
+):
+    if vod_name_format == "title":
+        short_id = video["id"][:short_id_length]
+        base = f"{safe_name(video['title'])}_{short_id}"
+    elif vod_name_format == "random":
+        token = unique_suffix or uuid.uuid4().hex[:12]
+        base = f"vod_{token}"
+    elif vod_name_format == "timestamp":
+        created_at = video.get("published_at") or video["created_at"]
+        base = f"{format_clip_timestamp(created_at)}_{video['id'][:TIMESTAMP_ID_LENGTH]}"
+    else:
+        raise ValueError(
+            f"Unsupported vod_name_format: {vod_name_format}"
+        )
+
+    return f"{base}.%(ext)s"
+
+
+def download_vod(
+    video,
+    channel,
+    *,
+    short_id_length,
+    vod_name_format,
+    yt_dlp_quiet,
+    show_progress,
+    subprocess_module,
+):
+    url = video["url"]
+    title = safe_name(video["title"])
+    date_folder = (video.get("published_at") or video["created_at"])[:10]
+    folder = os.path.join("vods", channel, date_folder)
+
+    os.makedirs(folder, exist_ok=True)
+
+    filename = build_vod_filename(
+        video,
+        vod_name_format=vod_name_format,
+        short_id_length=short_id_length,
+    )
+
+    logging.info(
+        "Downloading VOD: %s (%s) → %s",
+        channel,
+        date_folder,
+        title,
+    )
+
+    cmd = [
+        sys.executable, "-m", "yt_dlp",
+        "--no-overwrites",
+        "-o", os.path.join(folder, filename),
+        url,
+    ]
+
+    if yt_dlp_quiet:
+        cmd.append("--quiet")
+
+    if show_progress:
+        stdout = None
+        stderr = None
+    else:
+        stdout = subprocess_module.DEVNULL
+        stderr = subprocess_module.DEVNULL
+
+    result = subprocess_module.run(cmd, stdout=stdout, stderr=stderr)
+    return result.returncode == 0

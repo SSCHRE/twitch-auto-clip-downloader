@@ -12,29 +12,17 @@ def rclone_on_path(monkeypatch):
     )
 
 
-def test_rejects_sync_when_cleanup_enabled(rclone_on_path):
+@pytest.mark.parametrize("command", ["sync", "move"])
+def test_rejects_non_copy_when_cleanup_enabled(rclone_on_path, command):
     with pytest.raises(ValueError, match="rclone_command.*copy"):
         config.validate_rclone_config(
             True,
             ["gdrive"],
-            "sync",
+            command,
             [],
             "TwitchClips",
             False,
-            delete_local_clips_outside_lookback=True,
-        )
-
-
-def test_rejects_move_when_cleanup_enabled(rclone_on_path):
-    with pytest.raises(ValueError, match="rclone_command.*copy"):
-        config.validate_rclone_config(
-            True,
-            ["gdrive"],
-            "move",
-            [],
-            "TwitchClips",
-            False,
-            delete_local_clips_outside_lookback=True,
+            delete_local_after_upload=True,
         )
 
 
@@ -48,13 +36,13 @@ def test_allows_copy_when_cleanup_enabled(rclone_on_path, caplog):
         [],
         "TwitchClips",
         False,
-        delete_local_clips_outside_lookback=True,
+        delete_local_after_upload=True,
     )
 
-    assert "rclone copy is required" in caplog.text
+    assert "deleted after a successful rclone upload" in caplog.text
 
 
-def test_cleanup_without_rclone_does_not_require_copy():
+def test_cleanup_without_rclone_warns(caplog):
     config.validate_rclone_config(
         False,
         [],
@@ -62,5 +50,20 @@ def test_cleanup_without_rclone_does_not_require_copy():
         [],
         "TwitchClips",
         False,
-        delete_local_clips_outside_lookback=True,
+        delete_local_after_upload=True,
     )
+
+    assert "has no effect" in caplog.text
+
+
+def test_rejects_non_bool_cleanup():
+    with pytest.raises(ValueError, match="delete_local_after_upload"):
+        config.validate_rclone_config(
+            False,
+            [],
+            "copy",
+            [],
+            "TwitchClips",
+            False,
+            delete_local_after_upload="yes",
+        )
