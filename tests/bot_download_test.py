@@ -24,6 +24,7 @@ def load_bot_with_config(monkeypatch, tmp_path, config_data):
 
 def test_download_clip_builds_title_filename(monkeypatch, tmp_path):
     captured = {}
+    monkeypatch.chdir(tmp_path)
 
     fake_result = Mock()
     fake_result.returncode = 0
@@ -52,6 +53,7 @@ def test_download_clip_builds_title_filename(monkeypatch, tmp_path):
 
 def test_download_clip_builds_timestamp_filename(monkeypatch, tmp_path):
     captured = {}
+    monkeypatch.chdir(tmp_path)
 
     fake_result = Mock()
     fake_result.returncode = 0
@@ -79,6 +81,7 @@ def test_download_clip_builds_timestamp_filename(monkeypatch, tmp_path):
 
 def test_download_clip_builds_random_filename(monkeypatch, tmp_path):
     captured = {}
+    monkeypatch.chdir(tmp_path)
 
     fake_result = Mock()
     fake_result.returncode = 0

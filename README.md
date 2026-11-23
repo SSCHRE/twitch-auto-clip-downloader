@@ -1,16 +1,19 @@
 # Twitch automatic clip downloader
 
-Automatically downloads newly created Twitch clips from one or more channels.
+Automatically downloads newly created Twitch clips (and optionally full VODs) from one or more channels.
 
 ## Features
 
 - Monitors one or multiple Twitch channels for newly created clips  
+- Optional full VOD (past broadcast archive) downloads
+  - Skips the stream that is currently live; only completed archives are downloaded
 - Customizable check interval (polling-based)  
 - Supports duplicate clip names (e.g. bot-generated clips or repeated titles)
-- Keeps track of already downloaded clips through a SQLite database
+- Keeps track of already downloaded clips and VODs through a SQLite database
 - Automatically saves clips into a local `/clips` folder  
   - Organized by channel/game/date for easier navigation
-- Supports rclone to automatically upload new clips after downloading.
+- Saves VODs into a local `/vods` folder organized by channel/date
+- Supports rclone to automatically upload new clips (and VODs) after downloading.
   - Requires environment variable `rclone` command to be available
 - Configurable clip folder structure
   - Supports `game_date` layout:
@@ -28,6 +31,13 @@ Automatically downloads newly created Twitch clips from one or more channels.
         └── YYYY-MM-DD/
             └── GameName/
                 └── clip.mp4
+    ```
+  - VOD layout:
+    ```
+    vods/
+    └── ChannelName/
+        └── YYYY-MM-DD/
+            └── vod.mp4
     ```
 
 ## Info
@@ -74,17 +84,32 @@ Set `clip_name_format` in `config.json`:
 
 `short_id_length` only applies to the `title` format. Random names use a generated token; timestamp names append a short clip ID suffix from the Twitch API (the unique part after `-` in the clip ID, up to 8 characters).
 
-## Local clip cleanup
+## VOD downloads
 
-Set `delete_local_clips_outside_lookback` to `true` to remove local clips in date folders older than `clip_lookback_days`. 
+Set `enable_vod_download` to `true` to also download completed past-broadcast archives.
 
-- Only deletes files under the local `clips/` folder
-- Also removes matching clip records from `clips.db`, so lowering lookback and raising it again will re-download those clips
-- Removes empty game/channel folders left behind after date folders are deleted
-- Runs after rclone uploads in each check cycle, so older clips can upload first
+- Uses Twitch Helix `/videos` with `type=archive`
+- Checks `vod_lookback_days` (default `7`)
+- Skips any VOD whose `stream_id` matches the channel's currently live stream, so in-progress broadcasts are never downloaded
+- After a stream ends, the finished archive is picked up on a later poll
+- Naming uses `vod_name_format` (`title` / `random` / `timestamp`), same options as clips
+- Files are stored under `vods/{channel}/{YYYY-MM-DD}/`
+- When rclone is enabled, VODs upload to `{rclone_destination}/vods`
+
+## Delete local files after upload
+
+Set `delete_local_after_upload` to `true` to remove local clips and VODs once rclone has uploaded them.
+
+- Only runs when `enable_rclone` is `true`
+- Files are deleted only after rclone succeeded for **every** remote; if any upload fails, local files are kept and retried on the next check
+- Only deletes files under the local `clips/` (and `vods/`, when VOD download is enabled) folders, and removes the empty folders left behind
+- Unfinished yt-dlp downloads (`.part`, `.ytdl`) are kept so they can resume
+- Records stay in `clips.db`, so deleted clips and VODs are not downloaded again
 - Does not delete anything from your rclone remotes
 
-When `enable_rclone` is also `true`, `rclone_command` must be `copy`. The bot will refuse to start with `sync` or `move`, because those could delete remote clips after local cleanup runs.
+`rclone_command` must be `copy`. The bot will refuse to start with `sync` or `move`, because `sync` would delete remote files once the local copies are gone.
+
+`delete_local_clips_outside_lookback` and `delete_local_vods_outside_lookback` have been replaced by this option; the bot logs a warning if they are still in `config.json`.
 
 ## Disclaimer
 

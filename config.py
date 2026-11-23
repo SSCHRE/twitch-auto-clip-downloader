@@ -23,7 +23,9 @@ def validate_general_config(
     clip_folder_order,
     clip_name_format,
     clip_lookback_days,
-    delete_local_clips_outside_lookback,
+    enable_vod_download,
+    vod_lookback_days,
+    vod_name_format,
 ):
     if not isinstance(client_id, str) or client_id.strip() == "":
         raise ValueError("'client_id' must not be empty")
@@ -68,17 +70,29 @@ def validate_general_config(
             clip_lookback_days,
         )
 
-    if not isinstance(delete_local_clips_outside_lookback, bool):
+    if not isinstance(enable_vod_download, bool):
+        raise ValueError("'enable_vod_download' must be true or false")
+
+    if vod_lookback_days < 1:
+        raise ValueError("'vod_lookback_days' must be at least 1")
+
+    if vod_name_format not in ("title", "random", "timestamp"):
         raise ValueError(
-            "'delete_local_clips_outside_lookback' must be true or false"
+            "'vod_name_format' must be 'title', 'random', or 'timestamp'"
         )
 
-    if delete_local_clips_outside_lookback:
+    if enable_vod_download:
         logging.info(
-            "Local clip cleanup enabled: clips older than %d days will be "
-            "deleted from the local clips folder",
-            clip_lookback_days,
+            "VOD download enabled: archives from the last %d days will be "
+            "downloaded (currently live streams are skipped)",
+            vod_lookback_days,
         )
+
+        if vod_name_format != "title":
+            logging.info(
+                "vod_name_format is set to %s; short_id_length is ignored",
+                vod_name_format,
+            )
 
 
 def find_rclone_executable():
@@ -93,7 +107,7 @@ def validate_rclone_config(
     rclone_destination,
     rclone_show_progress,
     *,
-    delete_local_clips_outside_lookback=False,
+    delete_local_after_upload=False,
 ):
     if not isinstance(enable_rclone, bool):
         raise ValueError("'enable_rclone' must be true or false")
@@ -128,19 +142,26 @@ def validate_rclone_config(
     if not isinstance(rclone_show_progress, bool):
         raise ValueError("'rclone_show_progress' must be true or false")
 
+    if not isinstance(delete_local_after_upload, bool):
+        raise ValueError("'delete_local_after_upload' must be true or false")
+
+    if delete_local_after_upload and not enable_rclone:
+        logging.warning(
+            "delete_local_after_upload has no effect while enable_rclone "
+            "is false; local files are kept"
+        )
+
     if (
-        delete_local_clips_outside_lookback
+        delete_local_after_upload
         and enable_rclone
         and rclone_command != "copy"
     ):
         raise ValueError(
-            "delete_local_clips_outside_lookback requires rclone_command to "
-            "be 'copy' so remote clips are not deleted when local files are "
-            "removed"
+            "delete_local_after_upload requires rclone_command to be 'copy' "
+            "so remote files are not deleted when local files are removed"
         )
 
-    if delete_local_clips_outside_lookback and enable_rclone:
+    if delete_local_after_upload and enable_rclone:
         logging.info(
-            "rclone copy is required while delete_local_clips_outside_lookback "
-            "is enabled to keep remote clips safe"
+            "Local files will be deleted after a successful rclone upload"
         )

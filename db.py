@@ -17,6 +17,18 @@ def init_db():
     )
     """)
 
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS vods (
+        vod_id TEXT PRIMARY KEY,
+        channel TEXT,
+        title TEXT,
+        url TEXT,
+        downloaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        uploaded INTEGER DEFAULT 0,
+        created_at TEXT
+    )
+    """)
+
     # Migration for existing databases
     c.execute("PRAGMA table_info(clips)")
     columns = [row[1] for row in c.fetchall()]
@@ -83,42 +95,6 @@ def save_clip(clip_id, channel, title, url, created_at=None):
     conn.commit()
     conn.close()
 
-
-def delete_clips_before(cutoff_date):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-
-    c.execute("""
-    DELETE FROM clips
-    WHERE created_at IS NOT NULL
-      AND substr(created_at, 1, 10) < ?
-    """, (cutoff_date.isoformat(),))
-
-    deleted = c.rowcount
-
-    conn.commit()
-    conn.close()
-
-    return deleted
-
-
-def delete_clips_by_id_prefix(prefix):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-
-    c.execute("""
-    DELETE FROM clips
-    WHERE clip_id LIKE ?
-      AND created_at IS NULL
-    """, (prefix + "%",))
-
-    deleted = c.rowcount
-
-    conn.commit()
-    conn.close()
-
-    return deleted
-
 def is_uploaded(clip_id):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -173,6 +149,89 @@ def mark_all_uploaded():
 
     c.execute("""
     UPDATE clips
+    SET uploaded = 1
+    WHERE uploaded = 0
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+def has_vod(vod_id):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+
+    c.execute(
+        "SELECT 1 FROM vods WHERE vod_id = ?",
+        (vod_id,)
+    )
+
+    result = c.fetchone() is not None
+
+    conn.close()
+    return result
+
+
+def save_vod(vod_id, channel, title, url, created_at=None):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+
+    c.execute("""
+    INSERT OR IGNORE INTO vods
+    (
+        vod_id,
+        channel,
+        title,
+        url,
+        created_at
+    )
+    VALUES (?, ?, ?, ?, ?)
+    """, (
+        vod_id,
+        channel,
+        title,
+        url,
+        created_at,
+    ))
+
+    if created_at:
+        c.execute("""
+        UPDATE vods
+        SET created_at = ?
+        WHERE vod_id = ?
+          AND created_at IS NULL
+        """, (created_at, vod_id))
+
+    conn.commit()
+    conn.close()
+
+
+def get_unuploaded_vods():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+
+    c.execute("""
+    SELECT vod_id
+    FROM vods
+    WHERE uploaded = 0
+    """)
+
+    results = [
+        row[0]
+        for row in c.fetchall()
+    ]
+
+    conn.close()
+
+    return results
+
+
+def mark_all_vods_uploaded():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+
+    c.execute("""
+    UPDATE vods
     SET uploaded = 1
     WHERE uploaded = 0
     """)

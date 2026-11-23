@@ -10,9 +10,13 @@ def run_rclone(
     rclone_args,
     rclone_show_progress,
     subprocess_module,
+    local_folders=None,
 ):
     if not enable_rclone:
         return True
+
+    if local_folders is None:
+        local_folders = ["clips"]
 
     overall_success = True
 
@@ -23,53 +27,68 @@ def run_rclone(
     )
 
     for remote in rclone_remotes:
-        destination = f"{remote}:{rclone_destination}"
+        for folder in local_folders:
+            if folder == "clips":
+                destination = f"{remote}:{rclone_destination}"
+            else:
+                destination = f"{remote}:{rclone_destination}/{folder}"
 
-        cmd = [
-            "rclone",
-            rclone_command,
-            "clips",
-            destination,
-        ]
+            cmd = [
+                "rclone",
+                rclone_command,
+                folder,
+                destination,
+            ]
 
-        if rclone_show_progress:
-            cmd.append("--progress")
-
-        cmd.extend(rclone_args)
-
-        logging.info("RCLONE - Uploading clips → %s", destination)
-
-        try:
             if rclone_show_progress:
-                stdout = None
-                stderr = None
-            else:
-                stdout = subprocess_module.DEVNULL
-                stderr = subprocess_module.DEVNULL
+                cmd.append("--progress")
 
-            result = subprocess_module.run(cmd, stdout=stdout, stderr=stderr)
+            cmd.extend(rclone_args)
 
-            if result.returncode == 0:
-                logging.info("rclone completed successfully → %s", destination)
-            else:
-                logging.error(
-                    "rclone failed for %s with exit code: %d",
-                    destination,
-                    result.returncode,
-                )
-                overall_success = False
-
-        except FileNotFoundError:
-            logging.error(
-                "rclone was not found. Install rclone or disable enable_rclone."
-            )
-            return False
-
-        except Exception:
-            logging.exception(
-                "Unexpected error while running rclone for %s",
+            logging.info(
+                "RCLONE - Uploading %s → %s",
+                folder,
                 destination,
             )
-            overall_success = False
+
+            try:
+                if rclone_show_progress:
+                    stdout = None
+                    stderr = None
+                else:
+                    stdout = subprocess_module.DEVNULL
+                    stderr = subprocess_module.DEVNULL
+
+                result = subprocess_module.run(
+                    cmd,
+                    stdout=stdout,
+                    stderr=stderr,
+                )
+
+                if result.returncode == 0:
+                    logging.info(
+                        "rclone completed successfully → %s",
+                        destination,
+                    )
+                else:
+                    logging.error(
+                        "rclone failed for %s with exit code: %d",
+                        destination,
+                        result.returncode,
+                    )
+                    overall_success = False
+
+            except FileNotFoundError:
+                logging.error(
+                    "rclone was not found. Install rclone or disable enable_rclone."
+                )
+                return False
+
+            except Exception:
+                logging.exception(
+                    "Unexpected error while running rclone for %s",
+                    destination,
+                )
+                overall_success = False
 
     return overall_success

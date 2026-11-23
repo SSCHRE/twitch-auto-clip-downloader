@@ -57,7 +57,7 @@ def test_rclone_forces_copy_when_local_cleanup_enabled(monkeypatch):
     captured = {}
 
     monkeypatch.setattr(bot, "ENABLE_RCLONE", True)
-    monkeypatch.setattr(bot, "DELETE_LOCAL_CLIPS_OUTSIDE_LOOKBACK", True)
+    monkeypatch.setattr(bot, "DELETE_LOCAL_AFTER_UPLOAD", True)
     monkeypatch.setattr(bot, "RCLONE_COMMAND", "sync")
     monkeypatch.setattr(bot, "RCLONE_REMOTES", ["gdrive"])
 
@@ -226,3 +226,25 @@ def test_rclone_progress_enabled(monkeypatch):
 
     assert captured["stdout"] is None
     assert captured["stderr"] is None
+
+
+def test_rclone_uploads_vods_when_enabled(monkeypatch):
+    fake_result = Mock()
+    fake_result.returncode = 0
+    calls = []
+
+    monkeypatch.setattr(bot, "ENABLE_RCLONE", True)
+    monkeypatch.setattr(bot, "ENABLE_VOD_DOWNLOAD", True)
+    monkeypatch.setattr(bot, "RCLONE_REMOTES", ["gdrive"])
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        return fake_result
+
+    monkeypatch.setattr(bot.subprocess, "run", fake_run)
+
+    assert bot.run_rclone() is True
+    assert calls == [
+        ["rclone", "copy", "clips", "gdrive:TwitchClips"],
+        ["rclone", "copy", "vods", "gdrive:TwitchClips/vods"],
+    ]

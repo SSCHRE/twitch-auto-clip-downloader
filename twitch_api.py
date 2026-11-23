@@ -123,3 +123,90 @@ def get_clips(get_fn, user_id, lookback_days):
 
     clips.sort(key=lambda c: c["created_at"], reverse=True)
     return clips
+
+
+def get_live_stream_id(get_fn, user_id):
+    url = f"https://api.twitch.tv/helix/streams?user_id={user_id}"
+    r = get_fn(url)
+    r.raise_for_status()
+
+    data = r.json().get("data", [])
+    if not data:
+        return None
+
+    return data[0]["id"]
+
+
+def _videos_period_for_lookback(lookback_days):
+    if lookback_days <= 1:
+        return "day"
+    if lookback_days <= 7:
+        return "week"
+    if lookback_days <= 30:
+        return "month"
+    return "all"
+
+
+def get_videos(get_fn, user_id, lookback_days, exclude_stream_id=None):
+    """Return completed archive VODs within the lookback window.
+
+    Excludes any VOD tied to exclude_stream_id (the currently live broadcast)
+    so in-progress streams are never downloaded.
+    """
+    now = datetime.datetime.now(datetime.UTC)
+    cutoff = now - datetime.timedelta(days=lookback_days)
+    period = _videos_period_for_lookback(lookback_days)
+
+    videos = []
+    cursor = None
+
+    while True:
+        url = (
+            f"https://api.twitch.tv/helix/videos"
+            f"?user_id={user_id}"
+            f"&type=archive"
+            f"&period={period}"
+            f"&sort=time"
+            f"&first=100"
+        )
+        if cursor:
+            url += f"&after={cursor}"
+
+        r = get_fn(url)
+        r.raise_for_status()
+
+        payload = r.json()
+        batch = payload.get("data", [])
+        videos.extend(batch)
+
+        cursor = payload.get("pagination", {}).get("cursor")
+        if not cursor:
+            break
+
+    filtered = []
+    for video in videos:
+        if exclude_stream_id and video.get("stream_id") == exclude_stream_id:
+            logging.info(
+                "Skipping in-progress VOD %s (live stream %s)",
+                video.get("id"),
+                exclude_stream_id,
+            )
+            continue
+
+        published_at = video.get("published_at") or video.get("created_at")
+        if not published_at:
+            continue
+
+        published = datetime.datetime.fromisoformat(
+            published_at.replace("Z", "+00:00")
+        )
+        if published < cutoff:
+            continue
+
+        filtered.append(video)
+
+    filtered.sort(
+        key=lambda v: v.get("published_at") or v.get("created_at"),
+        reverse=True,
+    )
+    return filtered
