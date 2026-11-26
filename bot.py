@@ -1,4 +1,5 @@
 import logging
+import shutil
 import subprocess
 import sys
 
@@ -6,11 +7,15 @@ import db
 import twitch_api
 import app
 import services
-from cleanup import cleanup_uploaded_files as _cleanup_uploaded_files
+from cleanup import (
+    cleanup_uploaded_files as _cleanup_uploaded_files,
+    has_local_files as _has_local_files,
+)
 from download import (
     safe_name,
     download_clip as _download_clip,
     download_vod as _download_vod,
+    is_complete_media as _is_complete_media,
 )
 from rclone import run_rclone as _run_rclone
 from settings import Settings, setup_logging, validate_runtime
@@ -35,6 +40,13 @@ except ValueError as exc:
 db.init_db()
 
 logging.info("Config loaded")
+
+VERIFY_DOWNLOADS = shutil.which("ffprobe") is not None
+if not VERIFY_DOWNLOADS:
+    logging.warning(
+        "ffprobe not found on PATH; downloads will not be checked for "
+        "corruption. Install ffmpeg to enable this."
+    )
 logging.info("Channels: %s", _settings.channels)
 
 # Re-exported for tests and external callers
@@ -112,6 +124,14 @@ def validate_config():
     )
 
 
+def verify_file(path, expected_seconds):
+    return _is_complete_media(
+        path,
+        expected_seconds,
+        subprocess_module=subprocess,
+    )
+
+
 def download_clip(clip, channel):
     return _download_clip(
         clip,
@@ -123,6 +143,7 @@ def download_clip(clip, channel):
         show_progress=RCLONE_SHOW_PROGRESS,
         get_game_name=get_game_name,
         subprocess_module=subprocess,
+        verify_file=verify_file if VERIFY_DOWNLOADS else None,
     )
 
 
@@ -135,6 +156,7 @@ def download_vod(video, channel):
         yt_dlp_quiet=YT_DLP_QUIET,
         show_progress=RCLONE_SHOW_PROGRESS,
         subprocess_module=subprocess,
+        verify_file=verify_file if VERIFY_DOWNLOADS else None,
     )
 
 
@@ -167,6 +189,10 @@ def cleanup_uploaded_files():
     return _cleanup_uploaded_files(local_folders())
 
 
+def has_local_files():
+    return _has_local_files(local_folders())
+
+
 def main():
     app.run(
         channels=CHANNELS,
@@ -178,6 +204,7 @@ def main():
             if DELETE_LOCAL_AFTER_UPLOAD and ENABLE_RCLONE
             else None
         ),
+        has_local_files=has_local_files,
         initialize=initialize,
         get_user_id=get_user_id,
         get_clips=get_clips,

@@ -1,6 +1,13 @@
 from unittest.mock import Mock
 import bot
 
+EXCLUDES = [
+    "--exclude", "*.part",
+    "--exclude", "*.part-Frag*",
+    "--exclude", "*.ytdl",
+    "--exclude", "*.temp.*",
+]
+
 def test_rclone_disabled(monkeypatch):
     monkeypatch.setattr(
         bot,
@@ -110,14 +117,16 @@ def test_rclone_multiple_remotes(monkeypatch):
         "rclone",
         "copy",
         "clips",
-        "gdrive:TwitchClips"
+        "gdrive:TwitchClips",
+        *EXCLUDES,
     ]
 
     assert calls[1] == [
         "rclone",
         "copy",
         "clips",
-        "onedrive:TwitchClips"
+        "onedrive:TwitchClips",
+        *EXCLUDES,
     ]
 
 
@@ -245,6 +254,24 @@ def test_rclone_uploads_vods_when_enabled(monkeypatch):
 
     assert bot.run_rclone() is True
     assert calls == [
-        ["rclone", "copy", "clips", "gdrive:TwitchClips"],
-        ["rclone", "copy", "vods", "gdrive:TwitchClips/vods"],
+        ["rclone", "copy", "clips", "gdrive:TwitchClips", *EXCLUDES],
+        ["rclone", "copy", "vods", "gdrive:TwitchClips/vods", *EXCLUDES],
     ]
+
+
+def test_rclone_creates_missing_source_folder(monkeypatch, tmp_path):
+    fake_result = Mock()
+    fake_result.returncode = 0
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(bot, "ENABLE_RCLONE", True)
+    monkeypatch.setattr(bot, "ENABLE_VOD_DOWNLOAD", True)
+    monkeypatch.setattr(bot, "RCLONE_REMOTES", ["gdrive"])
+    monkeypatch.setattr(
+        bot.subprocess,
+        "run",
+        lambda *args, **kwargs: fake_result,
+    )
+
+    assert bot.run_rclone() is True
+    assert (tmp_path / "vods").is_dir()

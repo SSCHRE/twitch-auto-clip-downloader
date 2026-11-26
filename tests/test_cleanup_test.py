@@ -59,3 +59,22 @@ def test_only_touches_given_folders(tmp_path):
 
 def test_handles_missing_folder(tmp_path):
     assert cleanup.cleanup_uploaded_files([tmp_path / "clips"]) == 0
+
+
+def test_title_with_part_in_name_is_not_partial():
+    assert cleanup.is_partial_download("my.party_abc123.mp4") is False
+    assert cleanup.is_partial_download("x.temp_abc123.mp4") is False
+    assert cleanup.is_partial_download("clip.mp4.part") is True
+    assert cleanup.is_partial_download("clip.temp.mp4") is True
+
+
+def test_has_local_files_ignores_partials(tmp_path):
+    folder = tmp_path / "clips" / "channel"
+    folder.mkdir(parents=True)
+    (folder / "busy.mp4.part").write_text("data")
+
+    assert cleanup.has_local_files([tmp_path / "clips"]) is False
+
+    (folder / "done.mp4").write_text("data")
+
+    assert cleanup.has_local_files([tmp_path / "clips"]) is True
