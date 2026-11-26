@@ -1,8 +1,15 @@
+import glob
 import os
 import re
 import sys
 import logging
 import uuid
+
+from cleanup import is_partial_download
+
+# A download shorter than this share of the length Twitch reports is
+# treated as truncated (e.g. the disk filled up while writing it)
+MIN_DURATION_RATIO = 0.9
 
 
 def safe_name(name: str) -> str:
@@ -28,6 +35,98 @@ def safe_name(name: str) -> str:
 
 
 TIMESTAMP_ID_LENGTH = 8
+
+
+def parse_twitch_duration(value):
+    """Clips report seconds as a number, VODs a string like '1h2m3s'."""
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    if not value:
+        return None
+
+    match = re.fullmatch(r"(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?", value)
+    if not match or not any(match.groups()):
+        return None
+
+    hours, minutes, seconds = (int(g or 0) for g in match.groups())
+    return hours * 3600 + minutes * 60 + seconds
+
+
+def probe_duration(path, *, subprocess_module):
+    result = subprocess_module.run(
+        [
+            "ffprobe",
+            "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            path,
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode != 0:
+        return None
+
+    try:
+        return float(result.stdout.strip())
+    except ValueError:
+        return None
+
+
+def is_complete_media(path, expected_seconds, *, subprocess_module):
+    duration = probe_duration(path, subprocess_module=subprocess_module)
+
+    if duration is None or duration <= 0:
+        logging.error("Downloaded file is unreadable: %s", path)
+        return False
+
+    if expected_seconds and duration < expected_seconds * MIN_DURATION_RATIO:
+        logging.error(
+            "Downloaded file is truncated: %s (%.0fs of %.0fs)",
+            path,
+            duration,
+            expected_seconds,
+        )
+        return False
+
+    return True
+
+
+def find_downloaded_files(folder, filename):
+    base = filename[: -len(".%(ext)s")]
+    pattern = os.path.join(glob.escape(folder), glob.escape(base) + ".*")
+
+    return [
+        path
+        for path in glob.glob(pattern)
+        if not is_partial_download(os.path.basename(path))
+    ]
+
+
+def verify_download(folder, filename, expected_seconds, verify_file):
+    files = find_downloaded_files(folder, filename)
+
+    if not files:
+        logging.error(
+            "yt-dlp reported success but no file was found for %s",
+            os.path.join(folder, filename),
+        )
+        return False
+
+    broken = [
+        path
+        for path in files
+        if not verify_file(path, expected_seconds)
+    ]
+
+    # remove broken files so the next check downloads them again
+    for path in broken:
+        os.remove(path)
+        logging.warning("Deleted broken download %s", path)
+
+    return not broken
 
 
 def clip_id_suffix(clip_id: str) -> str:
@@ -73,6 +172,7 @@ def download_clip(
     show_progress,
     get_game_name,
     subprocess_module,
+    verify_file=None,
 ):
     url = clip["url"]
 
@@ -119,7 +219,18 @@ def download_clip(
         stderr = subprocess_module.DEVNULL
 
     result = subprocess_module.run(cmd, stdout=stdout, stderr=stderr)
-    return result.returncode == 0
+    if result.returncode != 0:
+        return False
+
+    if verify_file is None:
+        return True
+
+    return verify_download(
+        folder,
+        filename,
+        parse_twitch_duration(clip.get("duration")),
+        verify_file,
+    )
 
 
 def build_vod_filename(
@@ -155,6 +266,7 @@ def download_vod(
     yt_dlp_quiet,
     show_progress,
     subprocess_module,
+    verify_file=None,
 ):
     url = video["url"]
     title = safe_name(video["title"])
@@ -194,4 +306,15 @@ def download_vod(
         stderr = subprocess_module.DEVNULL
 
     result = subprocess_module.run(cmd, stdout=stdout, stderr=stderr)
-    return result.returncode == 0
+    if result.returncode != 0:
+        return False
+
+    if verify_file is None:
+        return True
+
+    return verify_download(
+        folder,
+        filename,
+        parse_twitch_duration(video.get("duration")),
+        verify_file,
+    )

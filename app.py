@@ -9,6 +9,7 @@ def run(
     enable_rclone,
     enable_vod_download=False,
     cleanup_uploaded_files=None,
+    has_local_files=None,
     initialize,
     get_user_id,
     get_clips,
@@ -149,7 +150,16 @@ def run(
             )
             pending_uploads = len(pending_clips) + len(pending_vods)
 
-            if pending_uploads:
+            # also upload files left behind by an earlier run, so they
+            # can be cleaned up even when nothing new was downloaded
+            leftover_files = (
+                not pending_uploads
+                and cleanup_uploaded_files
+                and has_local_files
+                and has_local_files()
+            )
+
+            if pending_uploads or leftover_files:
                 logging.info(
                     "%d items waiting for upload (%d clips, %d VODs)",
                     pending_uploads,

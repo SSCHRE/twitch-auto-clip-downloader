@@ -36,6 +36,7 @@ def test_download_clip_builds_title_filename(monkeypatch, tmp_path):
     monkeypatch.setattr(bot.subprocess, "run", fake_run)
     monkeypatch.setattr(bot, "get_game_name", lambda x: "Minecraft")
     monkeypatch.setattr(bot, "CLIP_NAME_FORMAT", "title")
+    monkeypatch.setattr(bot, "VERIFY_DOWNLOADS", False)
 
     clip = {
         "id": "abcdef123456",

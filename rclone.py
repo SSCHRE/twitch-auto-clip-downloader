@@ -1,4 +1,7 @@
 import logging
+import os
+
+from cleanup import PARTIAL_DOWNLOAD_PATTERNS
 
 
 def run_rclone(
@@ -33,12 +36,19 @@ def run_rclone(
             else:
                 destination = f"{remote}:{rclone_destination}/{folder}"
 
+            # rclone fails on a missing source folder, e.g. vods/ before
+            # the first VOD is downloaded
+            os.makedirs(folder, exist_ok=True)
+
             cmd = [
                 "rclone",
                 rclone_command,
                 folder,
                 destination,
             ]
+
+            for pattern in PARTIAL_DOWNLOAD_PATTERNS:
+                cmd.extend(["--exclude", pattern])
 
             if rclone_show_progress:
                 cmd.append("--progress")

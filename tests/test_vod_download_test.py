@@ -17,6 +17,7 @@ def test_download_vod_builds_title_filename(monkeypatch, tmp_path):
         lambda cmd, **kwargs: captured.update({"cmd": cmd}) or fake_result,
     )
     monkeypatch.setattr(bot, "VOD_NAME_FORMAT", "title")
+    monkeypatch.setattr(bot, "VERIFY_DOWNLOADS", False)
 
     video = {
         "id": "335921245",

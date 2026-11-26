@@ -96,6 +96,16 @@ Set `enable_vod_download` to `true` to also download completed past-broadcast ar
 - Files are stored under `vods/{channel}/{YYYY-MM-DD}/`
 - When rclone is enabled, VODs upload to `{rclone_destination}/vods`
 
+## Download verification
+
+When `ffprobe` (part of [ffmpeg](https://ffmpeg.org/)) is on your PATH, every finished download is checked before it is saved:
+
+- The file must be readable, and at least 90% of the length Twitch reports for the clip or VOD
+- Broken or truncated files (for example after the disk filled up) are deleted and not recorded in `clips.db`, so they are downloaded again on the next check and never uploaded
+- Without `ffprobe` the bot logs a warning at startup and skips this check
+
+On Ubuntu/Debian: `sudo apt install ffmpeg`
+
 ## Delete local files after upload
 
 Set `delete_local_after_upload` to `true` to remove local clips and VODs once rclone has uploaded them.

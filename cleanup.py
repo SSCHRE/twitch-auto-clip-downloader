@@ -1,14 +1,27 @@
 import logging
 import os
 
+# yt-dlp leftovers from interrupted downloads, as rclone filter patterns
+PARTIAL_DOWNLOAD_PATTERNS = ("*.part", "*.part-Frag*", "*.ytdl", "*.temp.*")
+
 
 def is_partial_download(filename):
-    # yt-dlp leftovers from interrupted downloads; keep them so it can resume
+    # keep these so yt-dlp can resume them
+    stem, _ext = os.path.splitext(filename)
     return (
-        ".part" in filename
-        or filename.endswith(".ytdl")
-        or ".temp." in filename
+        filename.endswith((".part", ".ytdl"))
+        or ".part-Frag" in filename
+        or stem.endswith(".temp")
     )
+
+
+def has_local_files(folders):
+    for folder in folders:
+        for _root, _dirs, files in os.walk(folder):
+            if any(not is_partial_download(f) for f in files):
+                return True
+
+    return False
 
 
 def cleanup_uploaded_files(folders):

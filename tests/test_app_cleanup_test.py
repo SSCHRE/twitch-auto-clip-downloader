@@ -3,7 +3,9 @@ import pytest
 import app
 
 
-def run_once(*, rclone_result, pending_clips, calls, cleanup=True):
+def run_once(
+    *, rclone_result, pending_clips, calls, cleanup=True, local_files=False
+):
     def fake_sleep(seconds):
         raise KeyboardInterrupt
 
@@ -35,6 +37,7 @@ def run_once(*, rclone_result, pending_clips, calls, cleanup=True):
             save_vod=lambda *args: None,
             get_unuploaded_vods=lambda: [],
             mark_all_vods_uploaded=lambda: None,
+            has_local_files=lambda: local_files,
             sleep=fake_sleep,
         )
 
@@ -66,3 +69,14 @@ def test_no_cleanup_when_not_provided():
         cleanup=False,
     )
     assert calls == ["rclone", "mark"]
+
+
+def test_leftover_local_files_are_uploaded_and_cleaned():
+    calls = []
+    run_once(
+        rclone_result=True,
+        pending_clips=[],
+        calls=calls,
+        local_files=True,
+    )
+    assert calls == ["rclone", "mark", "cleanup"]
